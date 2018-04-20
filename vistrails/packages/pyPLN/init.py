@@ -39,6 +39,21 @@ class Corpus(Module):
 
 		return 0
 
+class Tokens(Module):
+	raw = None
+	tok_sen = None
+
+	def __init__(self, raw):
+		self.raw = raw
+		self.tok_sen = self.tokenize(raw)
+
+	def tokenize(self, raw):
+		from nltk import word_tokenize
+
+		tok_sen = word_tokenize(raw)
+
+		return tok_sen
+
 # Module set up the content of ntlk to user's acess
 # Parameters: None
 # Return : None
@@ -55,7 +70,7 @@ class UpdateNltkCorpus(Module):
 		else:
 			raise ModuleError(self, "Execution Failed")
 
-# Module:
+# Module presents the NLTK's provided Corpuses
 # Parameters:
 # Return: 
 class ShowNLTKCorpus(Module):
@@ -75,7 +90,7 @@ class ShowNLTKCorpus(Module):
 		print " " + str(corpuses_list) + " "
 		self.set_output('output_corpus', corpuses_list)
 
-# Module
+# Module load the user's provided corpus
 # Parameters:
 # Return
 class LoadCorpus(Module):
@@ -89,21 +104,24 @@ class LoadCorpus(Module):
 			# corpus.check_corpus()
 			self.set_output('output_corpus', corpus)
 
+
+class Tokenizer(Module):
+
+	_input_ports = [IPort("input_text", "basic:String")]
+	_output_ports = [OPort("output_tokens", "Tokens")]
+
+	def compute(self):
+		raw = self.get_input("input_text")
+		# raw = corpusObject.corpus.raw()
+		tokObject = Tokens(raw)
+
+		self.set_output('output_tokens', tokObject)
+
+
+
 # Module
 # Parameters:
 # Return
 
 
-# class OwnCorpus(Module):
-
-# 	def compute(self):
-# 		from nltk.corpus import PlaintextCorpusReader
-# 		corpus_path = '' # Path
-# 		wordlists = PlaintextCorpusReader(corpus_path, '.*')
-
-# 		# 
-
-# 		# 
-
-
-_modules = [UpdateNltkCorpus, ShowNLTKCorpus,LoadCorpus, Corpus]
+_modules = [UpdateNltkCorpus, ShowNLTKCorpus,LoadCorpus, Corpus, Tokens, Tokenizer]
