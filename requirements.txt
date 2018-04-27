@@ -4,6 +4,7 @@ docutils
 dulwich
 file_archive>=0.6
 IPython
+keras==2.1.6
 matplotlib
 mysql-python
 numpy
