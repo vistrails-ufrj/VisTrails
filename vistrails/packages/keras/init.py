@@ -39,7 +39,7 @@ from vistrails.core.modules.vistrails_module import Module
 from vistrails.core.packagemanager import get_package_manager
 
 import numpy as np
-from keras.models import Sequential
+from keras.models import Sequential as KerasSequential
 
 class Sequential(Module):
     """Sequential model from keras.
@@ -48,5 +48,7 @@ class Sequential(Module):
     _output_ports = [("model", "basic:List", {'shape': 'circle'})]
 
     def compute(self):
-        model = Sequential()
-        self.set_output("model", ,model)
+        model = KerasSequential()
+        self.set_output("model", model)
+
+_modules = [Sequential]
