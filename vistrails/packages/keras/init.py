@@ -40,7 +40,27 @@ from vistrails.core.packagemanager import get_package_manager
 
 import numpy as np
 from keras.models import Sequential as KerasSequential
-from keras.layers import Dense, Activation
+from keras.layers import Dense as KerasDense
+from keras.layers import Activation
+from keras.datasets import imdb
+
+###############################################################################
+# Example datasets
+
+class Imdb(Module):
+    """Example dataset: imdb.
+    """
+    _settings = ModuleSettings(namespace="datasets")
+    _output_ports = [("train", "basic:List", {'shape': 'circle'}),
+                     ("test", "basic:List", {'shape': 'circle'})]
+
+    def compute(self):
+        train, test = imdb.load_data(path="imdb.npz", num_words=None, skip_top=0, maxlen=None, seed=113, start_char=1, oov_char=2, index_from=3)
+        self.set_output("train", train)
+        self.set_output("test", test)
+
+###############################################################################
+# Model functions
 
 class Sequential(Module):
     """Sequential model from keras.
