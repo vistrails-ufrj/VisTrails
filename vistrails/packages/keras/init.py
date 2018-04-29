@@ -76,14 +76,32 @@ class Sequential(Module):
         self.set_output("model", model)
         self.set_output("input_dim", input_dim)
 
+class Compile(Module):
+    """Compile model before train.
+    """
+    _settings = ModuleSettings(namespace="models")
+    _input_ports = [("model", "basic:List", {"shape": "diamond"}),
+                    ("optimizer", "basic:List", {"shape": "circle"}),
+                    ("loss", "basic:String", {"shape": "circle"}),
+                    ("metrics", "basic:List", {"shape": "circle"})]
+    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
 
-class DenseLayer(Module):
+    def compute(self):
+        optimizer = self.get_input("optimizer")
+        loss = self.get_input("loss")
+        metrics = self.get_input("metrics")
+        model = self.get_input("model")
+        model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+        self.set_output("model", model)
+
+
+class Dense(Module):
     """Fully-connected layer to Keras model.
     """
     _settings = ModuleSettings(namespace="layers")
     _input_ports = [("model", "basic:List", {"shape": "diamond"}),
                     ("units", "basic:Integer", {"shape": "circle"}),
-                    ("activation", "basic:String", {"shape": "circle", "defaults": ["relu"]}),
+                    ("activation", "basic:String", {"shape": "circle", "defaults": ["nothing"]}),
                     ("input_dim", "basic:Integer", {"shape": "circle", "defaults": [0]})]
     _output_ports = [("model", "basic:List", {"shape": "diamond"})]
 
@@ -94,10 +112,13 @@ class DenseLayer(Module):
         model = self.get_input("model")
 
         if input_dim != 0:
-            model.add(Dense(units, activation=activation, input_dim=input_dim))
+            model.add(KerasDense(units=units, input_dim=input_dim))
         else:
-            model.add(Dense(units, activation=activation))
+            model.add(KerasDense(units=units))
 
-        self.set_output("model", model.summary())
+        if activation != "nothing":
+            model.add(Activation(activation))
 
-_modules = [Sequential, DenseLayer]
+        self.set_output("model", model)
+
+_modules = [Sequential, Compile, Dense, Imdb]
