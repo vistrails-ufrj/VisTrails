@@ -40,15 +40,44 @@ from vistrails.core.packagemanager import get_package_manager
 
 import numpy as np
 from keras.models import Sequential as KerasSequential
+from keras.layers import Dense, Activation
 
 class Sequential(Module):
     """Sequential model from keras.
     """
     _settings = ModuleSettings(namespace="models")
-    _output_ports = [("model", "basic:List", {'shape': 'circle'})]
+    _input_ports = [("input_dim", "basic:Integer", {"shape": "circle"})]
+    _output_ports = [("model", "basic:List", {"shape": "diamond"}),
+                     ("input_dim", "basic:Integer", {"shape": "circle"})]
 
     def compute(self):
         model = KerasSequential()
+        input_dim = self.get_input("input_dim")
         self.set_output("model", model)
+        self.set_output("input_dim", input_dim)
 
-_modules = [Sequential]
+
+class DenseLayer(Module):
+    """Fully-connected layer to Keras model.
+    """
+    _settings = ModuleSettings(namespace="layers")
+    _input_ports = [("model", "basic:List", {"shape": "diamond"}),
+                    ("units", "basic:Integer", {"shape": "circle"}),
+                    ("activation", "basic:String", {"shape": "circle", "defaults": ["relu"]}),
+                    ("input_dim", "basic:Integer", {"shape": "circle", "defaults": [0]})]
+    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
+
+    def compute(self):
+        units = self.get_input("units")
+        input_dim = self.get_input("input_dim")
+        activation = self.get_input("activation")
+        model = self.get_input("model")
+
+        if input_dim != 0:
+            model.add(Dense(units, activation=activation, input_dim=input_dim))
+        else:
+            model.add(Dense(units, activation=activation))
+
+        self.set_output("model", model.summary())
+
+_modules = [Sequential, DenseLayer]
