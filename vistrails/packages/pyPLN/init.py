@@ -51,6 +51,14 @@ class Corpus(Module):
 			
 			return corpus
 
+	# Method to load the corpus 
+	# Parameters:
+	# Return: The Nltk.Corpus structure 
+	def get_raw(self, fileid):
+		return corpus.raw(fileid)
+
+	def get_textids(self):
+		return corpus.fileids()
 	# Method to check the corpus (debug)
 	# Parameters:
 	# Return: 1 for existing corpus, 0 for not
@@ -64,16 +72,17 @@ class Corpus(Module):
 		return 0
 
 
+
+
 # Module to create Tokens as parameters' type
 # Parameters: (String) A raw text to tokenize 
 # Return:
 class Tokens(Module):
-	raw = None
-	tok_sen = None
 
 	def __init__(self, raw):
 		self.raw = raw
 		self.tok_sen = self.tokenize(raw)
+		self._stemmed = False
 
 	# Method to tokenize a text
 	# Parameters: (String) Text
@@ -81,10 +90,51 @@ class Tokens(Module):
 	def tokenize(self, raw):
 		from nltk import word_tokenize
 
-		tok_sen = word_tokenize(raw)
+		self.tok_sen = word_tokenize(raw)
 
-		return tok_sen
+		return self.tok_sen
 
+	def set_tokens(self, tokens):
+		self.tok_sen = tokens
+
+	def PorterStem(self):
+		import nltk
+
+		if not self._stemmed:
+			porter = nltk.PorterStemmer()
+			for i in range(len(self.tok_sen)):
+				self.tok_sen[i] = porter.stem(self.tok_sen[i])
+
+			self._stemmed = True
+		else:
+			print "Already Stemmed"
+
+	def LancasterStem(self):
+		import nltk
+
+		print "test"
+		if not self._stemmed:
+			lancaster = nltk.LancasterStemmer()
+			print 'test'
+			for i in range(len(self.tok_sen)):
+				self.tok_sen[i] = lancaster.stem(self.tok_sen[i])
+			print 'test'
+			print self.tok_sen
+			self._stemmed = True
+		else:
+			print "Already Stemmed"
+
+	def WordNetLemma(self):
+		import nltk
+
+		if not self._stemmed:
+			wn = nltk.WordNetLemmatizer()
+			for i in range(len(self.tok_sen)):
+				self.tok_sen[i] = wn.lemmatize(self.tok_sen[i])
+
+			self._stemmed = True
+		else:
+			print "Already Stemmed"
 ##############
 
 ############## Workflow Modules ##############
@@ -173,9 +223,46 @@ class Tokenizer(Module):
 
 		self.set_output('output_tokens', tokObject)
 
+class PorterStemmer(Module):
+	_input_ports = [IPort("input_tokens", "Tokens")]
+	_output_ports = [OPort("output_token_stemmed", "Tokens")]
+
+	def comnpute(self):
+		tokens = self.get_input("input_tokens")
+
+		tokens.PorterStem()
+
+		self.set_output("output_token_stemmed",tokens)
+
+
+
+class LancasterStemmer(Module):
+	_input_ports = [IPort("input_tokens", "Tokens")]
+	_output_ports = [OPort("output_token_stemmed", "Tokens")]
+
+	def comnpute(self):
+		tokens = self.get_input("input_tokens")
+
+		tokens.LancasterStem()
+
+		self.set_output("output_token_stemmed",tokens)
+
+
+class WordNetLemmatizer(Module):
+	_input_ports = [IPort("input_tokens", "Tokens")]
+	_output_ports = [OPort("output_token_lemma", "Tokens")]
+
+	def comnpute(self):
+		tokens = self.get_input("input_tokens")
+
+		tokens.WordNetLemma()
+
+		self.set_output("output_token_stemmed",tokens)
+
+
 ##############
 
 
 
 
-_modules = [UpdateNltkCorpus, ShowNLTKCorpus,LoadMyCorpus, LoadNLTKCorpus, Corpus, Tokens, Tokenizer]
+_modules = [UpdateNltkCorpus, ShowNLTKCorpus, LoadMyCorpus, LoadNLTKCorpus, Corpus, Tokens, Tokenizer, PorterStemmer, LancasterStemmer,WordNetLemmatizer]
