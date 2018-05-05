@@ -34,7 +34,6 @@
 
 from __future__ import division
 
-from vistrails.core.packagemanager import get_package_manager
 from vistrails.core.requirements import require_python_module
 
 identifier = 'org.vistrails.vistrails.keras'
@@ -42,13 +41,9 @@ name = 'keras'
 version = '2.1.6'
 
 
-def package_dependencies():
-    tabledata_identifier = 'org.vistrails.vistrails.tabledata'
-    return [tabledata_identifier]
-
-
 def package_requirements():
     require_python_module('keras', {
-                          'pip': 'keras',
-                          'linux-debian': 'python-keras',
-                          'linux-ubuntu': 'python-keras'})
+                          'pip': 'keras==2.1.6'})
+    
+    require_python_module('tensorflow', {
+                          'pip': 'tensorflow==1.5.0'})
