@@ -39,10 +39,11 @@ from vistrails.core.modules.vistrails_module import Module
 from vistrails.core.packagemanager import get_package_manager
 
 import numpy as np
+from keras.datasets import imdb
+from keras.preprocessing import sequence
 from keras.models import Sequential as KerasSequential
 from keras.layers import Dense as KerasDense
 from keras.layers import Activation
-from keras.datasets import imdb
 
 ###############################################################################
 # Example datasets
@@ -51,13 +52,41 @@ class Imdb(Module):
     """Example dataset: imdb.
     """
     _settings = ModuleSettings(namespace="datasets")
-    _output_ports = [("train", "basic:List", {'shape': 'circle'}),
-                     ("test", "basic:List", {'shape': 'circle'})]
+    _input_ports = [("max_review_length", "basic:Integer", {"shape": "circle", "defaults": [0]})]
+    _output_ports = [("X_train", "basic:List", {"shape": "circle"}),
+                     ("y_train", "basic:List", {"shape": "circle"}),
+                     ("X_test", "basic:List", {"shape": "circle"}),
+                     ("y_test", "basic:List", {"shape": "circle"})]
 
     def compute(self):
-        train, test = imdb.load_data(path="imdb.npz", num_words=None, skip_top=0, maxlen=None, seed=113, start_char=1, oov_char=2, index_from=3)
-        self.set_output("train", train)
-        self.set_output("test", test)
+        (X_train, y_train), (X_test, y_test) = imdb.load_data(path="imdb.npz", num_words=5000, skip_top=0, maxlen=None, seed=113, start_char=1, oov_char=2, index_from=3)
+        max_review_length = self.get_input("max_review_length")
+        
+        if max_review_length != 0:
+            X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
+            y_train = sequence.pad_sequences(y_train, maxlen=max_review_length)
+        
+        self.set_output("X_train", X_train)
+        self.set_output("y_train", y_train)
+        self.set_output("X_test", X_test)
+        self.set_output("y_test", y_test)
+
+###############################################################################
+# Preprocessing functions
+
+class PadSequence(Module):
+    """Preprocessing data to keras model
+    """
+    _settings = ModuleSettings(namespace="preprocessing")
+    _input_ports = [("data", "basic:List", {"shape": "circle"}),
+                    ("max_review_length", "basic:Integer", {"shape": "circle"})]
+    _output_ports = [("data", "basic:List", {"shape": "circle"})]
+
+    def compute(self):
+        max_review_length = self.get_input("max_review_length")
+        data = sequence.pad_sequences(self.get_input("data"), maxlen=max_review_length)
+        self.set_output('data', data)
+        
 
 ###############################################################################
 # Model functions
