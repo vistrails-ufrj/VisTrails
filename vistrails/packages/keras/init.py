@@ -43,6 +43,8 @@ from keras.datasets import imdb
 from keras.preprocessing import sequence
 from keras.models import Sequential as KerasSequential
 from keras.layers import Dense as KerasDense
+from keras.layers import LSTM as KerasLSTM
+from keras.layers.embeddings import Embedding as KerasEmbedding
 from keras.layers import Activation
 
 ###############################################################################
@@ -95,7 +97,7 @@ class Sequential(Module):
     """Sequential model from keras.
     """
     _settings = ModuleSettings(namespace="models")
-    _input_ports = [("input_dim", "basic:Integer", {"shape": "circle"})]
+    _input_ports = [("input_dim", "basic:Integer", {"shape": "circle", "defaults": [0]})]
     _output_ports = [("model", "basic:List", {"shape": "diamond"}),
                      ("input_dim", "basic:Integer", {"shape": "circle"})]
 
@@ -110,7 +112,7 @@ class Compile(Module):
     """
     _settings = ModuleSettings(namespace="models")
     _input_ports = [("model", "basic:List", {"shape": "diamond"}),
-                    ("optimizer", "basic:List", {"shape": "circle"}),
+                    ("optimizer", "basic:String", {"shape": "circle"}),
                     ("loss", "basic:String", {"shape": "circle"}),
                     ("metrics", "basic:List", {"shape": "circle"})]
     _output_ports = [("model", "basic:List", {"shape": "diamond"})]
@@ -150,4 +152,49 @@ class Dense(Module):
 
         self.set_output("model", model)
 
-_modules = [Sequential, Compile, Dense, Imdb]
+class LSTM(Module):
+    """Fully-connected layer to Keras model.
+    """
+    _settings = ModuleSettings(namespace="layers")
+    _input_ports = [("model", "basic:List", {"shape": "diamond"}),
+                    ("units", "basic:Integer", {"shape": "circle"}),
+                    ("activation", "basic:String", {"shape": "circle", "defaults": ["nothing"]}),
+                    ("input_dim", "basic:Integer", {"shape": "circle", "defaults": [0]})]
+    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
+
+    def compute(self):
+        units = self.get_input("units")
+        input_dim = self.get_input("input_dim")
+        activation = self.get_input("activation")
+        model = self.get_input("model")
+
+        if input_dim != 0:
+            model.add(KerasLSTM(units=units, input_dim=input_dim))
+        else:
+            model.add(KerasLSTM(units=units))
+
+        if activation != "nothing":
+            model.add(Activation(activation))
+
+        self.set_output("model", model)
+
+class Embedding(Module):
+    """Embedding layer to Keras model.
+    """
+    _settings = ModuleSettings(namespace="layers")
+    _input_ports = [("model", "basic:List", {"shape": "diamond"}),
+                    ("top_words", "basic:Integer", {"shape": "circle"}),
+                    ("embedding_vector_length", "basic:Integer", {"shape": "circle"}),
+                    ("input_length", "basic:Integer", {"shape": "circle"})]
+    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
+
+    def compute(self):
+        top_words = self.get_input("top_words")
+        embedding_vector_length = self.get_input("embedding_vector_length")
+        input_length = self.get_input("input_length")
+        model = self.get_input("model")
+
+        model.add(KerasEmbedding(top_words, embedding_vector_length, input_length=input_length))
+        self.set_output("model", model)
+
+_modules = [Imdb, PadSequence, Sequential, Compile, Fit, Dense, LSTM, Embedding]
