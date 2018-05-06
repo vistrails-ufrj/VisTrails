@@ -34,7 +34,7 @@
 
 from __future__ import division
 
-from vistrails.core.modules.config import ModuleSettings
+from vistrails.core.modules.config import ModuleSettings, IPort, OPort
 from vistrails.core.modules.vistrails_module import Module
 from vistrails.core.packagemanager import get_package_manager
 
@@ -54,16 +54,18 @@ class Imdb(Module):
     """Example dataset: imdb.
     """
     _settings = ModuleSettings(namespace="datasets")
-    _input_ports = [("max_review_length", "basic:Integer", {"shape": "circle", "defaults": [0]})]
+    _input_ports = [("max_review_length", "basic:Integer", {"shape": "circle", "defaults": [0]}),
+                    ("top_words", "basic:Integer", {"shape": "circle", "defaults": [5000]})]
     _output_ports = [("X_train", "basic:List", {"shape": "circle"}),
                      ("y_train", "basic:List", {"shape": "circle"}),
                      ("X_test", "basic:List", {"shape": "circle"}),
                      ("y_test", "basic:List", {"shape": "circle"})]
 
     def compute(self):
-        (X_train, y_train), (X_test, y_test) = imdb.load_data(path="imdb.npz", num_words=5000, skip_top=0, maxlen=None, seed=113, start_char=1, oov_char=2, index_from=3)
+        top_words = self.get_input("top_words")
         max_review_length = self.get_input("max_review_length")
         
+        (X_train, y_train), (X_test, y_test) = imdb.load_data(path="imdb.npz", num_words=top_words)
         if max_review_length != 0:
             X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
             y_train = sequence.pad_sequences(y_train, maxlen=max_review_length)
