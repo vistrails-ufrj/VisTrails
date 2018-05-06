@@ -37,7 +37,7 @@ from __future__ import division
 from vistrails.core.requirements import require_python_module
 
 identifier = 'org.vistrails.vistrails.keras'
-name = 'keras'
+name = 'Keras'
 version = '2.1.6'
 
 
