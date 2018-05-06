@@ -125,6 +125,29 @@ class Compile(Module):
         model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
         self.set_output("model", model)
 
+class Fit(Module):
+    """Train the compiled model.
+    """
+    _settings = ModuleSettings(namespace="models")
+    _input_ports = [("model", "basic:List", {"shape": "diamond"}),
+                    ("data", "basic:List", {"shape": "circle"}),
+                    ("labels", "basic:List", {"shape": "circle"}),
+                    ("epochs", "basic:Integer", {"shape": "circle"}),
+                    ("batch_size", "basic:Integer", {"shape": "circle", "defaults": [32]})]
+    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
+
+    def compute(self):
+        data = self.get_input("data")
+        labels = self.get_input("labels")
+        batch_size = self.get_input("batch_size")
+        epochs = self.get_input("epochs")
+        model = self.get_input("model")
+        print('das',data)
+        model.fit(data, labels, epochs=epochs, batch_size=batch_size)
+        self.set_output("model", model)
+
+###############################################################################
+# Layer functions
 
 class Dense(Module):
     """Fully-connected layer to Keras model.
