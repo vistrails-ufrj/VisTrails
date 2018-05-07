@@ -35,7 +35,7 @@
 from __future__ import division
 
 from vistrails.core.modules.config import ModuleSettings, IPort, OPort
-from vistrails.core.modules.vistrails_module import Module
+from vistrails.core.modules.vistrails_module import Module, ModuleError
 from vistrails.core.packagemanager import get_package_manager
 
 import numpy as np
@@ -46,6 +46,11 @@ from keras.layers import Dense as KerasDense
 from keras.layers import LSTM as KerasLSTM
 from keras.layers.embeddings import Embedding as KerasEmbedding
 from keras.layers import Activation
+
+###############################################################################
+# Env variables
+import os
+DATASET_DIR = os.path.dirname(os.path.abspath(__file__)) + '/datasets'
 
 ###############################################################################
 # Example datasets
@@ -60,15 +65,50 @@ class Imdb(Module):
                      ("y_train", "basic:List", {"shape": "circle"}),
                      ("X_test", "basic:List", {"shape": "circle"}),
                      ("y_test", "basic:List", {"shape": "circle"})]
+    
+    def __init__(self):
+        Module.__init__(self)
+        self.filename = DATASET_DIR + '/imdb.npy'
 
-    def compute(self):
-        top_words = self.get_input("top_words")
-        max_review_length = self.get_input("max_review_length")
+    def loadData(self):
+        try:
+            data = np.load(self.filename)
+            top_words = data['top_words']
+            assert top_words == self.top_words
+            print('pega train')
+            X_train = data['X_train']
+            y_train = data['y_train']
+            print('pega test')
+            X_test = data['X_test']
+            y_test = data['y_test']
+        except AssertionError:
+            print('parameters does not matches... downloading data')
+            (X_train, y_train), (X_test, y_test) = imdb.load_data(path="imdb.npz", num_words=self.top_words)
+            self.saveData(X_train, y_train, X_test, y_test)
+        except:
+            print('downloading data...')
+            (X_train, y_train), (X_test, y_test) = imdb.load_data(path="imdb.npz", num_words=self.top_words)
+            self.saveData(X_train, y_train, X_test, y_test)
+        return (X_train, y_train), (X_test, y_test)
+    
+    def saveData(self, X_train, y_train, X_test, y_test):
+        config = {
+            'top_words': self.top_words,
+            'X_train': X_train,
+            'y_train': y_train,
+            'X_test': X_test,
+            'y_test': y_test
+        }
+        np.save(self.filename, config)
+
+    def compute(self):    
+        self.max_review_length = self.get_input("max_review_length")
+        self.top_words = self.get_input("top_words")
+        (X_train, y_train), (X_test, y_test) = self.loadData()
         
-        (X_train, y_train), (X_test, y_test) = imdb.load_data(path="imdb.npz", num_words=top_words)
-        if max_review_length != 0:
-            X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
-            y_train = sequence.pad_sequences(y_train, maxlen=max_review_length)
+        if self.max_review_length != 0:
+            X_train = sequence.pad_sequences(X_train, maxlen=self.max_review_length)
+            y_train = sequence.pad_sequences(y_train, maxlen=self.max_review_length)
         
         self.set_output("X_train", X_train)
         self.set_output("y_train", y_train)
