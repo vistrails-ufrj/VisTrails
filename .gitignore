@@ -19,3 +19,6 @@ vistrails.egg-info/
 
 # sphinx build
 doc/usersguide/_build/
+
+# keras datasets
+/vistrails/packages/keras/datasets/*
