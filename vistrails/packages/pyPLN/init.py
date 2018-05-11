@@ -83,6 +83,7 @@ class Tokens(Module):
 		self.raw = raw
 		self.tok_sen = self.tokenize(raw)
 		self._stemmed = False
+		self._normalized = False
 
 	# Method to tokenize a text
 	# Parameters: (String) Text
@@ -97,6 +98,13 @@ class Tokens(Module):
 	def set_tokens(self, tokens):
 		self.tok_sen = tokens
 
+	def get_tokens(self, tokens):
+		return self.tok_sen
+
+
+	# Method to Stem by Porter Algorithm a set of tokens
+	# Parameters:
+	# Return:
 	def PorterStem(self):
 		import nltk
 
@@ -109,6 +117,10 @@ class Tokens(Module):
 		else:
 			print "Already Stemmed"
 
+
+	# Method to Stem by Lancaster Algorithm a set of tokens
+	# Parameters:
+	# Return:
 	def LancasterStem(self):
 		import nltk
 
@@ -124,6 +136,10 @@ class Tokens(Module):
 		else:
 			print "Already Stemmed"
 
+
+	# Method to Lemmatize a set of tokens
+	# Parameters:
+	# Return:
 	def WordNetLemma(self):
 		import nltk
 
@@ -135,6 +151,25 @@ class Tokens(Module):
 			self._stemmed = True
 		else:
 			print "Already Stemmed"
+
+	# Method to normalize the set of tokens
+	# Parameters: 
+	# Return:		
+	def normalize(self):
+		norm_tokens = [token.lower() for token in self.tok_sen]
+		self.tok_sen = norm_tokens
+		self._normalized = True
+
+	def rmv_stopwords(self, stopwords):
+		if not self._normalized:
+			self.normalize()
+
+		norm_tokens = [tokens for tokens in self.tok_sen if tokens not in stopwords]
+		self.tok_sen = norm_tokens
+
+
+
+
 ##############
 
 ############## Workflow Modules ##############
@@ -224,10 +259,10 @@ class Tokenizer(Module):
 		self.set_output('output_tokens', tokObject)
 
 class PorterStemmer(Module):
-	_input_ports = [IPort("input_tokens", "Tokens")]
-	_output_ports = [OPort("output_token_stemmed", "Tokens")]
+	_input_ports = [IPort(name = "input_tokens", signature = "Tokens")]
+	_output_ports = [OPort(name = "output_token_stemmed", signature = "Tokens")]
 
-	def comnpute(self):
+	def compute(self):
 		tokens = self.get_input("input_tokens")
 
 		tokens.PorterStem()
@@ -235,12 +270,11 @@ class PorterStemmer(Module):
 		self.set_output("output_token_stemmed",tokens)
 
 
-
 class LancasterStemmer(Module):
 	_input_ports = [IPort("input_tokens", "Tokens")]
 	_output_ports = [OPort("output_token_stemmed", "Tokens")]
 
-	def comnpute(self):
+	def compute(self):
 		tokens = self.get_input("input_tokens")
 
 		tokens.LancasterStem()
@@ -252,12 +286,44 @@ class WordNetLemmatizer(Module):
 	_input_ports = [IPort("input_tokens", "Tokens")]
 	_output_ports = [OPort("output_token_lemma", "Tokens")]
 
-	def comnpute(self):
+	def compute(self):
 		tokens = self.get_input("input_tokens")
 
 		tokens.WordNetLemma()
 
-		self.set_output("output_token_stemmed",tokens)
+		self.set_output("output_token_lemma",tokens)
+
+class Normalize(Module):
+	_input_ports = [IPort("input_tokens", "Tokens")]
+	_output_ports = [OPort("output_token_norm", "Tokens")]
+
+	def compute(self):
+		tokens = self.get_input("input_tokens")
+
+		tokens.normalize()
+
+		self.set_output("output_token_norm", tokens)
+
+class Rmv_Stopwords(Module):
+	_input_ports = [IPort("input_tokens", "Tokens"), IPort(name = 'input_stopwords',signature = 'basic:List', optional = True)]
+	_output_ports = [OPort("output_token_norm", "Tokens")]
+
+	def compute(self):
+		tokens = self.get_input("input_tokens")
+		stopwords = None
+		if self.has_input('input_stopwords'):
+			stopwords = self.get_input('input_stopwords')
+		else:
+			stopwords = self.get_nltk_stopw()
+
+		tokens.rmv_stopwords(stopwords)
+
+		self.set_output("output_token_norm", tokens)
+
+	def get_nltk_stopw(self):
+		import nltk
+
+		return nltk.corpus.stopwords.words('english')
 
 
 ##############
@@ -265,4 +331,8 @@ class WordNetLemmatizer(Module):
 
 
 
-_modules = [UpdateNltkCorpus, ShowNLTKCorpus, LoadMyCorpus, LoadNLTKCorpus, Corpus, Tokens, Tokenizer, PorterStemmer, LancasterStemmer,WordNetLemmatizer]
+_modules = [UpdateNltkCorpus, ShowNLTKCorpus, LoadMyCorpus, LoadNLTKCorpus, Corpus, 
+			Tokens, Tokenizer, 
+			PorterStemmer, LancasterStemmer, WordNetLemmatizer,
+			Normalize, Rmv_Stopwords,
+			]
