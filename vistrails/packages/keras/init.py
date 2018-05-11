@@ -72,19 +72,13 @@ class Imdb(Module):
 
     def loadData(self):
         try:
-            data = np.load(self.filename)
+            data = np.load(self.filename).item()
             top_words = data['top_words']
             assert top_words == self.top_words
-            print('pega train')
             X_train = data['X_train']
             y_train = data['y_train']
-            print('pega test')
             X_test = data['X_test']
             y_test = data['y_test']
-        except AssertionError:
-            print('parameters does not matches... downloading data')
-            (X_train, y_train), (X_test, y_test) = imdb.load_data(path="imdb.npz", num_words=self.top_words)
-            self.saveData(X_train, y_train, X_test, y_test)
         except:
             print('downloading data...')
             (X_train, y_train), (X_test, y_test) = imdb.load_data(path="imdb.npz", num_words=self.top_words)
@@ -105,10 +99,10 @@ class Imdb(Module):
         self.max_review_length = self.get_input("max_review_length")
         self.top_words = self.get_input("top_words")
         (X_train, y_train), (X_test, y_test) = self.loadData()
-        
+        print(X_train,y_train)
         if self.max_review_length != 0:
             X_train = sequence.pad_sequences(X_train, maxlen=self.max_review_length)
-            y_train = sequence.pad_sequences(y_train, maxlen=self.max_review_length)
+            X_test = sequence.pad_sequences(X_test, maxlen=self.max_review_length)
         
         self.set_output("X_train", X_train)
         self.set_output("y_train", y_train)
