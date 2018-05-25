@@ -84,6 +84,7 @@ class Tokens(Module):
 		self.tok_sen = self.tokenize(raw)
 		self._stemmed = False
 		self._normalized = False
+		self.tok_tag = None
 
 	# Method to tokenize a text
 	# Parameters: (String) Text
@@ -100,6 +101,9 @@ class Tokens(Module):
 
 	def get_tokens(self, tokens):
 		return self.tok_sen
+
+	def get_tok_tag(self):
+		return self.tok_tag
 
 
 	# Method to Stem by Porter Algorithm a set of tokens
@@ -167,6 +171,17 @@ class Tokens(Module):
 		norm_tokens = [tokens for tokens in self.tok_sen if tokens not in stopwords]
 		self.tok_sen = norm_tokens
 
+	def postag(self):
+		import nltk
+
+		self.tok_tag = nltk.pos_tag(self.tok_sen)
+
+	# Method to tag Part of Speech tokens
+	# Parameters: 
+	# Return:
+	def stanfordTag(self,jar_path,model_path):
+		spt = StanfordPOSTagger(model_path,jar_path)
+		self.tok_tag = spt.tag(self.tok_sen)
 
 
 
@@ -320,10 +335,38 @@ class Rmv_Stopwords(Module):
 
 		self.set_output("output_token_norm", tokens)
 
-	def get_nltk_stopw(self):
+	def get_nltk_stopw(self, lang="english"):
 		import nltk
 
-		return nltk.corpus.stopwords.words('english')
+		return nltk.corpus.stopwords.words(lang)
+
+class defaultPOStagger(Module):
+	_input_ports = [IPort('input_tokens', "Tokens")]
+	_output_ports = [OPort('output_token')]
+
+	def compute(self):
+		tokens = self.get_input('input_tokens')
+		tokens.postag()
+
+		print tokens.get_tok_tag()
+		self.set_output('output_token', tokens)
+
+
+class StanfordPOStagger(Module):
+	_input_ports = [IPort('path_to_jar','Basic:Path'), 
+					IPort('path_to_model','Basic:Path'),
+					IPort('input_tokens', "Tokens")]
+	_output_ports = [OPort('output_token')]
+
+	def compute(self):
+		tokens = self.get_input('input_tokens')
+		jar_path = self.get_input('path_to_jar')
+		model_path = self.get_input('path_to_model')
+
+		tokens.stanfordTag(jar_path,model_path)
+
+		print tokens.get_tok_tag()
+		self.set_output('output_token', tokens)
 
 
 ##############
@@ -335,4 +378,5 @@ _modules = [UpdateNltkCorpus, ShowNLTKCorpus, LoadMyCorpus, LoadNLTKCorpus, Corp
 			Tokens, Tokenizer, 
 			PorterStemmer, LancasterStemmer, WordNetLemmatizer,
 			Normalize, Rmv_Stopwords,
+			defaultPOStagger, StanfordPOStagger
 			]
