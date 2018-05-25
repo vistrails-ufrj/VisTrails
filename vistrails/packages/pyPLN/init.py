@@ -180,6 +180,7 @@ class Tokens(Module):
 	# Parameters: 
 	# Return:
 	def stanfordTag(self,jar_path,model_path):
+		from nltk.tag import StanfordPOSTagger
 		spt = StanfordPOSTagger(model_path,jar_path)
 		self.tok_tag = spt.tag(self.tok_sen)
 
@@ -342,7 +343,7 @@ class Rmv_Stopwords(Module):
 
 class defaultPOStagger(Module):
 	_input_ports = [IPort('input_tokens', "Tokens")]
-	_output_ports = [OPort('output_token')]
+	_output_ports = [OPort('output_token', 'Tokens')]
 
 	def compute(self):
 		tokens = self.get_input('input_tokens')
@@ -353,15 +354,15 @@ class defaultPOStagger(Module):
 
 
 class StanfordPOStagger(Module):
-	_input_ports = [IPort('path_to_jar','Basic:Path'), 
-					IPort('path_to_model','Basic:Path'),
+	_input_ports = [IPort('path_to_jar','basic:Path'), 
+					IPort('path_to_model','basic:Path'),
 					IPort('input_tokens', "Tokens")]
-	_output_ports = [OPort('output_token')]
+	_output_ports = [OPort('output_token', 'Tokens')]
 
 	def compute(self):
 		tokens = self.get_input('input_tokens')
-		jar_path = self.get_input('path_to_jar')
-		model_path = self.get_input('path_to_model')
+		jar_path = str(self.get_input('path_to_jar').name)
+		model_path = str(self.get_input('path_to_model').name)
 
 		tokens.stanfordTag(jar_path,model_path)
 
