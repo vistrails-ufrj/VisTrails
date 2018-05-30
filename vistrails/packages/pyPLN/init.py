@@ -1,6 +1,6 @@
 from vistrails.core.modules.vistrails_module import Module, ModuleError
 from vistrails.core.system import list2cmdline
-from vistrails.core.modules.config import IPort, OPort
+from vistrails.core.modules.config import ModuleSettings, IPort, OPort
 
 import os
 
@@ -22,6 +22,7 @@ import os
 # Parameters: (Directory) A directory to load the corpus from 
 # Return:
 class Corpus(Module):
+	_settings = ModuleSettings(namespace="Class")
 	corpus_dir = None
 	corpus = None
 	def __init__(self, corpus_obj = None, corpus_dir = None):
@@ -78,6 +79,7 @@ class Corpus(Module):
 # Parameters: (String) A raw text to tokenize 
 # Return:
 class Tokens(Module):
+	_settings = ModuleSettings(namespace="Class")
 
 	def __init__(self, raw):
 		self.raw = raw
@@ -85,6 +87,7 @@ class Tokens(Module):
 		self._stemmed = False
 		self._normalized = False
 		self.tok_tag = None
+		self.tok_ent = None
 
 	# Method to tokenize a text
 	# Parameters: (String) Text
@@ -104,6 +107,9 @@ class Tokens(Module):
 
 	def get_tok_tag(self):
 		return self.tok_tag
+
+	def get_tok_entities(self):
+		return self.tok_ent
 
 
 	# Method to Stem by Porter Algorithm a set of tokens
@@ -184,6 +190,15 @@ class Tokens(Module):
 		spt = StanfordPOSTagger(model_path,jar_path)
 		self.tok_tag = spt.tag(self.tok_sen)
 
+	# Method to tag Entities
+	# Parameters: String<path do jar_file>, String<path to trained model, String<encoding> optional 
+	# Return:
+	def stanfordNER(self, jar_path, model_path,encoding = 'utf8'):
+		from nltk.tag import StanfordNERTagger
+
+		st = StanfordNERTagger(model_path,jar_path,encoding)
+		self.tok_ent = st.tag(self.tok_sen)
+
 
 
 ##############
@@ -194,7 +209,7 @@ class Tokens(Module):
 # Parameters: None
 # Return : None
 class UpdateNltkCorpus(Module):
-
+	_settings = ModuleSettings(namespace="Config")
 	def compute(self):
 		cmd = ['sudo','python','-m',' nltk.downloader']
 		cmdline = list2cmdline(cmd)
@@ -210,6 +225,7 @@ class UpdateNltkCorpus(Module):
 # Parameters:
 # Return: 
 class ShowNLTKCorpus(Module):
+	_settings = ModuleSettings(namespace="Loader")
 	_output_ports = [OPort(name = "output_corpus", signature = "basic:List")]
 	def compute(self):
 
@@ -229,8 +245,9 @@ class ShowNLTKCorpus(Module):
 # Parameters: (string) corpus name
 # Return: (Corpus) corpus object
 class LoadNLTKCorpus(Module):
+	_settings = ModuleSettings(namespace="Loader")
 	_input_ports = [IPort(name = "input_corpus", signature = "basic:String")]
-	_output_ports = [OPort(name = "output_corpus_object", signature = "Corpus")]
+	_output_ports = [OPort(name = "output_corpus_object", signature = "Class|Corpus")]
 
 	def compute(self):
 		corpus_str = self.get_input('input_corpus')
@@ -251,21 +268,21 @@ class LoadNLTKCorpus(Module):
 # Parameters:
 # Return
 class LoadMyCorpus(Module):
+	_settings = ModuleSettings(namespace="Loader")
+	_input_ports = [IPort(name = "input_corpus", signature = "basic:Directory")]
+	_output_ports = [OPort(name = "output_corpus", signature = "Class|Corpus")]
+	def compute(self):
 		
-		_input_ports = [IPort(name = "input_corpus", signature = "basic:Directory")]
-		_output_ports = [OPort(name = "output_corpus", signature = "Corpus")]
-		def compute(self):
-			
-			corpus_dir = self.get_input('input_corpus')
-			corpus = Corpus(corpus_dir = corpus_dir)
-			# corpus.check_corpus()
-			self.set_output('output_corpus', corpus)
+		corpus_dir = self.get_input('input_corpus')
+		corpus = Corpus(corpus_dir = corpus_dir)
+		# corpus.check_corpus()
+		self.set_output('output_corpus', corpus)
 
 
 class Tokenizer(Module):
-
+	_settings = ModuleSettings(namespace="PreProc")
 	_input_ports = [IPort("input_text", "basic:String")]
-	_output_ports = [OPort("output_tokens", "Tokens")]
+	_output_ports = [OPort("output_tokens", "Class|Tokens")]
 
 	def compute(self):
 		raw = self.get_input("input_text")
@@ -275,8 +292,9 @@ class Tokenizer(Module):
 		self.set_output('output_tokens', tokObject)
 
 class PorterStemmer(Module):
-	_input_ports = [IPort(name = "input_tokens", signature = "Tokens")]
-	_output_ports = [OPort(name = "output_token_stemmed", signature = "Tokens")]
+	_settings = ModuleSettings(namespace="PreProc")
+	_input_ports = [IPort(name = "input_tokens", signature = "Class|Tokens")]
+	_output_ports = [OPort(name = "output_token_stemmed", signature = "Class|Tokens")]
 
 	def compute(self):
 		tokens = self.get_input("input_tokens")
@@ -287,8 +305,9 @@ class PorterStemmer(Module):
 
 
 class LancasterStemmer(Module):
-	_input_ports = [IPort("input_tokens", "Tokens")]
-	_output_ports = [OPort("output_token_stemmed", "Tokens")]
+	_settings = ModuleSettings(namespace="PreProc")
+	_input_ports = [IPort("input_tokens", "Class|Tokens")]
+	_output_ports = [OPort("output_token_stemmed", "Class|Tokens")]
 
 	def compute(self):
 		tokens = self.get_input("input_tokens")
@@ -299,8 +318,9 @@ class LancasterStemmer(Module):
 
 
 class WordNetLemmatizer(Module):
-	_input_ports = [IPort("input_tokens", "Tokens")]
-	_output_ports = [OPort("output_token_lemma", "Tokens")]
+	_settings = ModuleSettings(namespace="PreProc")
+	_input_ports = [IPort("input_tokens", "Class|Tokens")]
+	_output_ports = [OPort("output_token_lemma", "Class|Tokens")]
 
 	def compute(self):
 		tokens = self.get_input("input_tokens")
@@ -310,8 +330,9 @@ class WordNetLemmatizer(Module):
 		self.set_output("output_token_lemma",tokens)
 
 class Normalize(Module):
-	_input_ports = [IPort("input_tokens", "Tokens")]
-	_output_ports = [OPort("output_token_norm", "Tokens")]
+	_settings = ModuleSettings(namespace="PreProc")	
+	_input_ports = [IPort("input_tokens", "Class|Tokens")]
+	_output_ports = [OPort("output_token_norm", "Class|Tokens")]
 
 	def compute(self):
 		tokens = self.get_input("input_tokens")
@@ -321,8 +342,9 @@ class Normalize(Module):
 		self.set_output("output_token_norm", tokens)
 
 class Rmv_Stopwords(Module):
-	_input_ports = [IPort("input_tokens", "Tokens"), IPort(name = 'input_stopwords',signature = 'basic:List', optional = True)]
-	_output_ports = [OPort("output_token_norm", "Tokens")]
+	_settings = ModuleSettings(namespace="PreProc")
+	_input_ports = [IPort("input_tokens", "Class|Tokens"), IPort(name = 'input_stopwords',signature = 'basic:List', optional = True)]
+	_output_ports = [OPort("output_token_norm", "Class|Tokens")]
 
 	def compute(self):
 		tokens = self.get_input("input_tokens")
@@ -342,8 +364,9 @@ class Rmv_Stopwords(Module):
 		return nltk.corpus.stopwords.words(lang)
 
 class defaultPOStagger(Module):
-	_input_ports = [IPort('input_tokens', "Tokens")]
-	_output_ports = [OPort('output_token', 'Tokens')]
+	_settings = ModuleSettings(namespace="PreProc")
+	_input_ports = [IPort('input_tokens', "Class|Tokens")]
+	_output_ports = [OPort('output_token', 'Class|Tokens')]
 
 	def compute(self):
 		tokens = self.get_input('input_tokens')
@@ -353,11 +376,12 @@ class defaultPOStagger(Module):
 		self.set_output('output_token', tokens)
 
 
-class StanfordPOStagger(Module):
+class StanfordPOSTagger(Module):
+	_settings = ModuleSettings(namespace="Stanford")
 	_input_ports = [IPort('path_to_jar','basic:Path'), 
 					IPort('path_to_model','basic:Path'),
-					IPort('input_tokens', "Tokens")]
-	_output_ports = [OPort('output_token', 'Tokens')]
+					IPort('input_tokens', "Class|Tokens")]
+	_output_ports = [OPort('output_token', 'Class|Tokens')]
 
 	def compute(self):
 		tokens = self.get_input('input_tokens')
@@ -367,6 +391,23 @@ class StanfordPOStagger(Module):
 		tokens.stanfordTag(jar_path,model_path)
 
 		print tokens.get_tok_tag()
+		self.set_output('output_token', tokens)
+
+class StanfordNERTagger(Module):
+	_settings = ModuleSettings(namespace="Stanford")
+	_input_ports = [IPort('path_to_jar','basic:Path'), 
+					IPort('path_to_model','basic:Path'),
+					IPort('encoding','basic:String', optional=True),
+					IPort('input_tokens', "Class|Tokens")]
+	_output_ports = [OPort('output_token', 'Class|Tokens')]
+	def compute(self):
+		tokens = self.get_input('input_tokens')
+		jar_path = str(self.get_input('path_to_jar').name)
+		model_path = str(self.get_input('path_to_model').name)
+
+		tokens.stanfordNER(jar_path,model_path)
+
+		print tokens.get_tok_entities()
 		self.set_output('output_token', tokens)
 
 
@@ -379,5 +420,5 @@ _modules = [UpdateNltkCorpus, ShowNLTKCorpus, LoadMyCorpus, LoadNLTKCorpus, Corp
 			Tokens, Tokenizer, 
 			PorterStemmer, LancasterStemmer, WordNetLemmatizer,
 			Normalize, Rmv_Stopwords,
-			defaultPOStagger, StanfordPOStagger
+			defaultPOStagger, StanfordPOSTagger, StanfordNERTagger
 			]
