@@ -47,6 +47,8 @@ from keras.layers import LSTM as KerasLSTM
 from keras.layers.embeddings import Embedding as KerasEmbedding
 from keras.layers import Activation
 
+from pandas import read_csv
+
 ###############################################################################
 # Env variables
 import os
@@ -54,6 +56,38 @@ DATASET_DIR = os.path.dirname(os.path.abspath(__file__)) + '/datasets'
 
 ###############################################################################
 # Example datasets
+
+class ReadCSV(Module):
+    """Return pandas dataframe from CSV file
+    """
+    _settings = ModuleSettings(namespace="datasets")
+    _input_ports = [("file_path", "basic:File", {"shape": "circle"}),
+                    ("delimeter", "basic:String", {"shape": "circle", "defaults": [',']}),
+                    ("header", "basic:Integer", {"shape": "circle", "defaults": [0]}),
+                    ("parse_dates", "basic:List", {"shape": "circle", "defaults": [[]]}),
+                    ("index_col", "basic:List", {"shape": "circle", "defaults": [[]]}),
+                    ("chunk_size", "basic:Integer", {"shape": "circle", "defaults": [0]})]
+
+    _output_ports = [("data", "basic:List", {"shape": "circle"})]
+    
+    def compute(self):
+        file_path = self.get_input("file_path").name
+        delimeter = self.get_input("delimeter")
+        header = self.get_input("header")
+        parse_dates = self.get_input("parse_dates")
+        index_col = self.get_input("index_col")
+        chunk_size = self.get_input("chunk_size")
+
+        if index_col == []:
+            index_col = None
+        if parse_dates == []:
+            parse_dates = None
+        if chunk_size == 0:
+            chunk_size = None
+
+        data = read_csv(file_path, delimiter=delimeter, header=header, parse_dates=parse_dates, index_col=index_col, chunksize=chunk_size)
+        self.set_output("data", data)
+
 
 class Imdb(Module):
     """Example dataset: imdb.
@@ -107,24 +141,7 @@ class Imdb(Module):
         self.set_output("X_train", X_train)
         self.set_output("y_train", y_train)
         self.set_output("X_test", X_test)
-        self.set_output("y_test", y_test)
-
-###############################################################################
-# Preprocessing functions
-
-class PadSequence(Module):
-    """Preprocessing data to keras model
-    """
-    _settings = ModuleSettings(namespace="preprocessing")
-    _input_ports = [("data", "basic:List", {"shape": "circle"}),
-                    ("max_review_length", "basic:Integer", {"shape": "circle"})]
-    _output_ports = [("data", "basic:List", {"shape": "circle"})]
-
-    def compute(self):
-        max_review_length = self.get_input("max_review_length")
-        data = sequence.pad_sequences(self.get_input("data"), maxlen=max_review_length)
-        self.set_output('data', data)
-        
+        self.set_output("y_test", y_test)        
 
 ###############################################################################
 # Model functions
@@ -256,4 +273,4 @@ class Embedding(Module):
         model.add(KerasEmbedding(top_words, embedding_vector_length, input_length=input_length))
         self.set_output("model", model)
 
-_modules = [Imdb, PadSequence, Sequential, Compile, Fit, Dense, LSTM, Embedding]
+_modules = [Imdb, ReadCSV, Sequential, Compile, Fit, Dense, LSTM, Embedding]
