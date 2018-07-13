@@ -972,6 +972,7 @@ class VistrailController(QtCore.QObject, BaseController):
         if not dir_name:
             return None
         dir_name = os.path.abspath(str(dir_name))
+        setattr(get_vistrails_configuration(), 'fileDir', dir_name)
         vistrails.core.system.set_vistrails_file_directory(dir_name)
         return dir_name
 
@@ -1200,9 +1201,7 @@ class VistrailController(QtCore.QObject, BaseController):
         self._delayed_actions = []
 
         (a, b) = self.analogy[analogy_name]
-        a = self.create_upgrade(a)
-        b = self.create_upgrade(b)
-        c = self.create_upgrade(analogy_target)
+        c = analogy_target
         if self.current_version != c:
             self.change_selected_version(c)
 

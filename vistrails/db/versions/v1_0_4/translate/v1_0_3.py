@@ -277,7 +277,7 @@ def translateStartup(_startup):
          'temporaryDirectory': 'temporaryDir',
          'dataDirectory': 'dataDir',
          'fileDirectory': 'fileDir',
-         'packageDirectory': None,
+         'packageDirectory': 'packageDir',
 
          }
 

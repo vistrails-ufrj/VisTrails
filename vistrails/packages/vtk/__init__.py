@@ -41,9 +41,7 @@ the world. http://www.vtk.org"""
 from __future__ import division
 
 from identifiers import *
-from vistrails.core import debug
-from vistrails.core.requirements import MissingRequirement
-
+import vistrails.core
 
 def package_dependencies():
     import vistrails.core.packagemanager
@@ -60,10 +58,7 @@ def package_requirements():
             'linux-debian': 'python-vtk',
             'linux-ubuntu': 'python-vtk',
             'linux-fedora': 'vtk-python'})
-
-    from vistrails.gui.requirements import require_pyqt4_api2
-    try:
-        require_pyqt4_api2()
-    except MissingRequirement:
+    if not python_module_exists('PyQt4'):
+        from vistrails.core import debug
         debug.warning('PyQt4 is not available. There will be no interaction '
                       'between VTK and the spreadsheet.')

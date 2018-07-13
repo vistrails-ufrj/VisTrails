@@ -48,6 +48,7 @@ from __future__ import division
 
 from datetime import datetime
 import email.utils
+import hashlib
 import os
 import re
 import urllib
@@ -61,6 +62,7 @@ except ImportError:
     sha_hash = sha.new
 
 from vistrails.core.bundles.pyimport import py_import
+from vistrails.core.configuration import get_vistrails_persistent_configuration
 from vistrails.core import debug
 import vistrails.core.modules.basic_modules
 from vistrails.core.modules.basic_modules import PathObject
@@ -68,6 +70,11 @@ import vistrails.core.modules.module_registry
 from vistrails.core.modules.vistrails_module import Module, ModuleError
 from vistrails.core.system import current_dot_vistrails, strptime
 from vistrails.core.upgradeworkflow import UpgradeWorkflowHandler
+import vistrails.gui.repository
+from vistrails.gui.utils import show_warning
+
+from vistrails.core.repository.poster.encode import multipart_encode
+from vistrails.core.repository.poster.streaminghttp import register_openers
 
 from .identifiers import identifier
 from .http_directory import download_directory
@@ -368,30 +375,22 @@ class DownloadFile(Module):
     filesystem so as to not re-download unchanged files.
 
     Recognized URL schemes are:
-      - `http://...`
-      - `https://...`
-      - `ftp://...`
-      - `ssh://user[:password]@host[:port]/absolute/path`
-
-        Examples:
-
-        - `ssh://john@vistrails.nyu.edu/home/john/example.txt`
-        - `ssh://eve:my%20secret@google.com/tmp/test%20file.bin`
-
-        Note that both password and path are url-encoded, that the path
-        is absolute, and that the username must be specified
-      - `scp://[user@]host:path`
-
-        Examples:
-
-        - `scp://john@vistrails.nyu.edu:files/test.txt`
-        - `scp://poly.edu:/tmp/test.bin`
-
-        Note that nothing is url encoded, that the path can be relative
-        (to the user's home directory) and that no username or port can
-        be specified
-
-    If `insecure` is set, an invalid TLS certificate will not cause an error.
+        http://...
+        https://...
+        ftp://...
+        ssh://user[:password]@host[:port]/absolute/path
+            Examples:
+                ssh://john@vistrails.nyu.edu/home/john/example.txt
+                ssh://eve:my%20secret@google.com/tmp/test%20file.bin
+            Note that both password and path are url-encoded, that the path
+            is absolute, and that the username must be specified
+        scp://[user@]host:path
+            Examples:
+                scp://john@vistrails.nyu.edu:files/test.txt
+                scp://poly.edu:/tmp/test.bin
+            Note that nothing is url encoded, that the path can be relative
+            (to the user's home directory) and that no username or port can
+            be specified
     """
 
     def compute(self):
@@ -414,9 +413,7 @@ class DownloadFile(Module):
 
 
 class HTTPDirectory(Module):
-    """Downloads a whole directory recursively from a URL.
-
-    If `insecure` is set, an invalid TLS certificate will not cause an error.
+    """Downloads a whole directory recursively from a URL
     """
 
     def compute(self):
@@ -435,33 +432,188 @@ class HTTPDirectory(Module):
         return local_path
 
 
-class URLEncode(Module):
-    """Encode special characters to a format suitable for URLs.
+class RepoSync(Module):
+    """ VisTrails Server version of RepoSync modules. Customized to play
+    nicely with crowdlabs. Needs refactoring.
 
-    This uses Python's `urllib.quote_plus()` function, which encodes special
-    characters as `%xx` escapes and a space ' ' with a plus sign '+'.
-
-    Example::
-
-    '~/abc def' -> '%7e/abc+def'
+    RepoSync enables data to be synced with a online repository. The designated file
+    parameter will be uploaded to the repository on execution,
+    creating a new pipeline version that links to online repository data.
+    If the local file isn't available, then the online repository data is used.
     """
 
+    def __init__(self):
+        Module.__init__(self)
+
+        config = get_vistrails_persistent_configuration()
+        if config.check('webRepositoryURL'):
+            self.base_url = config.webRepositoryURL
+        else:
+            raise ModuleError(self,
+                              ("No webRepositoryURL value defined"
+                               " in the Expert Configuration"))
+
+        # check if we are running in server mode
+        # this effects how the compute method functions
+        if config.check('isInServerMode'):
+            self.is_server = bool(config.isInServerMode)
+        else:
+            self.is_server = False
+
+        # TODO: this '/' check should probably be done in core/configuration.py
+        if self.base_url[-1] == '/':
+            self.base_url = self.base_url[:-1]
+
+    # used for invaliding cache when user isn't logged in to crowdLabs
+    # but wants to upload data
+    def invalidate_cache(self):
+        return False
+
+    def validate_cache(self):
+        return True
+
+    def _file_is_in_local_cache(self, local_filename):
+        return os.path.isfile(local_filename)
+
+    def checksum_lookup(self):
+        """ checks if the repository has the wanted data """
+
+        checksum_url = "%s/datasets/exists/%s/" % (self.base_url,
+                                                   self.checksum)
+        self.on_server = False
+        try:
+            check_dataset_on_repo = urllib2.urlopen(url=checksum_url)
+            self.up_to_date = True if \
+                    check_dataset_on_repo.read() == 'uptodate' else False
+            self.on_server = True
+        except urllib2.HTTPError:
+            self.up_to_date = True
+
+    def data_sync(self):
+        """ downloads/uploads/uses the local file depending on availability """
+        self.checksum_lookup()
+
+        # local file not on repository, so upload
+        if not self.on_server and os.path.isfile(self.in_file.name):
+            cookiejar = vistrails.gui.repository.QRepositoryDialog.cookiejar
+            if cookiejar:
+                register_openers(cookiejar=cookiejar)
+
+                params = {'dataset_file': open(self.in_file.name, 'rb'),
+                          'name': self.in_file.name.split('/')[-1],
+                          'origin': 'vistrails',
+                          'checksum': self.checksum}
+
+                upload_url = "%s/datasets/upload/" % self.base_url
+
+                datagen, headers = multipart_encode(params)
+                request = urllib2.Request(upload_url, datagen, headers)
+                try:
+                    result = urllib2.urlopen(request)
+                    if result.code != 200:
+                        show_warning("Upload Failure",
+                                     "Data failed to upload to repository")
+                        # make temporarily uncachable
+                        self.is_cacheable = self.invalidate_cache
+                    else:
+                        debug.warning("Push to repository was successful")
+                        # make sure module caches
+                        self.is_cacheable = self.validate_cache
+                except Exception, e:
+                    show_warning("Upload Failure",
+                                 "Data failed to upload to repository")
+                    # make temporarily uncachable
+                    self.is_cacheable = self.invalidate_cache
+                debug.warning('RepoSync uploaded %s to the repository' % \
+                              self.in_file.name)
+            else:
+                show_warning("Please login", ("You must be logged into the web"
+                                              " repository in order to upload "
+                                              "data. No data was synced"))
+                # make temporarily uncachable
+                self.is_cacheable = self.invalidate_cache
+
+            # use local data
+            self.set_output("file", self.in_file)
+        else:
+            # file on repository mirrors local file, so use local file
+            if self.up_to_date and os.path.isfile(self.in_file.name):
+                self.set_output("file", self.in_file)
+            else:
+                # local file not present or out of date, download or use cache
+                self.url = "%s/datasets/download/%s" % (self.base_url,
+                                                       self.checksum)
+                local_filename = os.path.join(package_directory,
+                                              cache_filename(self.url))
+                if not self._file_is_in_local_cache(local_filename):
+                    # file not in cache, download.
+                    try:
+                        urllib.urlretrieve(self.url, local_filename)
+                    except IOError, e:
+                        raise ModuleError(self, ("Invalid URL: %s" % e))
+                out_file = PathObject(local_filename)
+                debug.warning('RepoSync is using repository data')
+                self.set_output("file", out_file)
+
+
+    def compute(self):
+        # if server, grab local file using checksum id
+        if self.is_server:
+            self.check_input('checksum')
+            self.checksum = self.get_input("checksum")
+            # get file path
+            path_url = "%s/datasets/path/%s/"%(self.base_url, self.checksum)
+            dataset_path_request = urllib2.urlopen(url=path_url)
+            dataset_path = dataset_path_request.read()
+
+            if os.path.isfile(dataset_path):
+                out_file = PathObject(dataset_path)
+                self.set_output("file", out_file)
+        else: # is client
+            self.check_input('file')
+            self.in_file = self.get_input("file")
+            if os.path.isfile(self.in_file.name):
+                # do size check
+                size = os.path.getsize(self.in_file.name)
+                if size > 26214400:
+                    show_warning("File is too large",
+                                 "file is larger than 25MB, "
+                                 "unable to sync with web repository")
+                    self.set_output("file", self.in_file)
+                else:
+                    # compute checksum
+                    f = open(self.in_file.name, 'r')
+                    self.checksum = hashlib.sha1()
+                    block = 1
+                    while block:
+                        block = f.read(128)
+                        self.checksum.update(block)
+                    f.close()
+                    self.checksum = self.checksum.hexdigest()
+
+                    # upload/download file
+                    self.data_sync()
+
+                    # set checksum param in module
+                    if not self.has_input('checksum'):
+                        self.change_parameter('checksum', [self.checksum])
+
+            else:
+                # local file not present
+                if self.has_input('checksum'):
+                    self.checksum = self.get_input("checksum")
+
+                    # download file
+                    self.data_sync()
+
+
+class URLEncode(Module):
     def compute(self):
         value = self.get_input('string')
         self.set_output('encoded', urllib.quote_plus(value))
 
 
 class URLDecode(Module):
-    """Decode special characters formatted into a URL.
-
-    This uses Python's `urllib.unquote_plus()` function, which decodes '%xx'
-    escapes and replaces a plus sign '+' with a space ' '.
-
-    Example::
-
-    '%7e/abc+def' -> '~/abc def'
-    """
-
     def compute(self):
         encoded = self.get_input('encoded')
         self.set_output('string', urllib.unquote_plus(encoded))
@@ -491,6 +643,15 @@ def initialize(*args, **keywords):
     reg.add_output_port(HTTPDirectory, 'local_path',
                         (basic.String, "local path"), optional=True)
 
+    reg.add_module(RepoSync)
+    reg.add_input_port(RepoSync, "file", (basic.File, 'File'))
+    reg.add_input_port(RepoSync, "checksum",
+                       (basic.String, 'Checksum'), optional=True)
+    reg.add_output_port(RepoSync, "file", (basic.File,
+                                           'Repository Synced File object'))
+    reg.add_output_port(RepoSync, "checksum",
+                        (basic.String, 'Checksum'), optional=True)
+
     reg.add_module(URLEncode)
     reg.add_input_port(URLEncode, "string", basic.String)
     reg.add_output_port(URLEncode, "encoded", basic.String)
@@ -513,52 +674,13 @@ def initialize(*args, **keywords):
 
     # Migrate files to new naming scheme: max 100 characters, with a hash if
     # it's too long
-    handled = set()
-
-    def move(old, new):
-        if os.path.exists(new):
-            os.remove(new)
-            handled.add(new)
-        os.rename(old, new)
-        handled.add(old)
-
-        old += '.etag'
-        new += '.etag'
-        if os.path.exists(new):
-            os.remove(new)
-            handled.add(new)
-        if os.path.exists(old):
-            os.rename(old, new)
-            handled.add(old)
-
     renamed = 0
-    for old_name in sorted(os.listdir(package_directory)):
-        old_filename = os.path.join(package_directory, old_name)
-        if old_filename in handled:
-            continue
-        if len(old_name) > MAX_CACHE_FILENAME:
-            hasher = sha_hash()
-            hasher.update(old_name)
-            new_name = (old_name[:MAX_CACHE_FILENAME - 41] +
-                        '_' + hasher.hexdigest())
-            new_filename = os.path.join(package_directory, new_name)
-            if os.path.exists(new_filename):
-                oldtime = os.path.getmtime(old_filename)
-                newtime = os.path.getmtime(new_filename)
-                if oldtime > newtime:
-                    move(old_filename, new_filename)
-                    renamed += 1
-                else:
-                    os.remove(old_filename)
-                    handled.add(old_filename)
-                    if os.path.exists(old_filename + '.etag'):
-                        os.remove(old_filename + '.etag')
-                        handled.add(old_filename + '.etag')
-            else:
-                move(old_filename, new_filename)
-                renamed += 1
-        else:
-            handled.add(old_filename + '.etag')
+    for filename in list(os.listdir(package_directory)):
+        if len(filename) > MAX_CACHE_FILENAME:
+            new_name = cache_filename(filename)
+            os.rename(os.path.join(package_directory, filename),
+                      os.path.join(package_directory, new_name))
+            renamed += 1
     if renamed:
         debug.warning("Renamed %d downloaded cache files" % renamed)
 
@@ -567,11 +689,8 @@ def handle_module_upgrade_request(controller, module_id, pipeline):
     module_remap = {
             # HTTPFile was renamed DownloadFile
             'HTTPFile': [
-                (None, '1.0.0', 'DownloadFile'),
+                (None, '1.0.0', 'DownloadFile', {})
             ],
-            'RepoSync': [
-                (None, '1.1.0', 'org.vistrails.vistrails.reposync:RepoSync'),
-            ]
         }
 
     return UpgradeWorkflowHandler.remap_module(controller,

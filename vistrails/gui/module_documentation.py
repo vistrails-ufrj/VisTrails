@@ -66,9 +66,15 @@ class QModuleDocumentation(QtGui.QDialog, QVistrailsPaletteInterface):
         self.layout().addWidget(self.name_label)
         self.package_label = QtGui.QLabel("")
         self.layout().addWidget(self.package_label)
-        self.textEdit = QtGui.QTextBrowser(self)
+        # self.closeButton = QtGui.QPushButton('Ok', self)
+        self.textEdit = QtGui.QTextEdit(self)
         self.layout().addWidget(self.textEdit, 1)
-        self.textEdit.setOpenExternalLinks(True)
+        self.textEdit.setReadOnly(True)
+        self.textEdit.setTextCursor(QtGui.QTextCursor(self.textEdit.document()))
+        # self.layout().addWidget(self.closeButton)
+        # self.connect(self.closeButton, QtCore.SIGNAL('clicked(bool)'), 
+        #              self.close)
+        # self.closeButton.setShortcut('Enter')
 
         self.update_descriptor()
 
@@ -105,13 +111,7 @@ class QModuleDocumentation(QtGui.QDialog, QVistrailsPaletteInterface):
             self.name_label.setText("Module name: %s" % descriptor.name)
             self.package_label.setText("Module package: %s" % \
                                            descriptor.module_package())
-            documentation = descriptor.module_documentation(module,
-                                                            format='html')
-            if documentation:
-                self.textEdit.setHtml(documentation)
-            else:
-                self.textEdit.setHtml(
-                        "<em>(No documentation available)</em>")
+            self.textEdit.setText(descriptor.module_documentation(module))
 
     def activate(self):
         if self.isVisible() == False:

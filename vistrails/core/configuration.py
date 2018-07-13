@@ -100,10 +100,10 @@ multithread: Server will start a thread for each request
 outputDirectory: Directory in which to place output files
 outputPipelineGraph: Output the workflow graph as an image
 outputVersionTree: Output the version tree as an image
+packageDir: System packages directory
 parameterExploration: Run parameter exploration instead of workflow
 parameters: List of parameters to use when running workflow
 port: The port for the database to load the vistrail from
-remoteShutdown: If connecting to single instance, make that instance exit
 reportUsage: Report anonymous usage statistics to the developers
 enableUsage: Enable sending anonymous usage statistics
 disableUsage: Disable sending anonymous usage statistics
@@ -347,6 +347,11 @@ outputVersionTree: Boolean
 
     Output the version tree as an image.
 
+packageDir: Path
+
+    The directory to look for VisTrails core packages (use
+    userPackageDir for user-defined packages).
+
 parameterExploration: Boolean
 
     Open and execute parameter exploration specified by the
@@ -367,10 +372,6 @@ pythonPrompt: Boolean
 recentVistrailList: String
 
     Storage for recent vistrails. Users should not edit.
-
-remoteShutdown: Boolean
-
-    If connecting to single instance, make that instance exit.
 
 reportUsage: Integer
 
@@ -559,7 +560,7 @@ user: String
 
     The username for the database to load the vistrail from.
 
-userPackageDir: Path
+userPackageDir: Boolean
 
     The location for user-installed packages (defaults to
     ~/.vistrails/userpackages).
@@ -676,8 +677,7 @@ base_config = {
      ConfigField("outputPipelineGraph", False, bool, ConfigType.COMMAND_LINE_FLAG),
      ConfigField("graphsAsPdf", True, bool, ConfigType.COMMAND_LINE_FLAG),
      ConfigField('enableUsage', False, bool, ConfigType.COMMAND_LINE_FLAG),
-     ConfigField('disableUsage', False, bool, ConfigType.COMMAND_LINE_FLAG),
-     ConfigField('remoteShutdown', False, bool, ConfigType.COMMAND_LINE_FLAG)],
+     ConfigField('disableUsage', False, bool, ConfigType.COMMAND_LINE_FLAG)],
     "Database":
     [ConfigField("host", None, ConfigURL, ConfigType.COMMAND_LINE),
      ConfigField("port", None, int, ConfigType.COMMAND_LINE),
@@ -775,6 +775,7 @@ base_config = {
                  ConfigPath, flag="-S"),
      ConfigField('subworkflowsDir', "subworkflows", ConfigPath),
      ConfigField('dataDir', None, ConfigPath),
+     ConfigField('packageDir', None, ConfigPath),
      ConfigField('userPackageDir', "userpackages", ConfigPath),
      ConfigField('fileDir', None, ConfigPath),
      ConfigField('logDir', "logs", ConfigPath),
@@ -1559,7 +1560,7 @@ class ConfigurationObject(DBConfiguration):
 #         'minMemory': (None, int),
 #         'multiHeads': False,
 #         'nologger': False,
-#         'packageDir': (None, str),
+#         'packageDirectory': (None, str),
 #         'pythonPrompt': False,
 #         'recentVistrailList': (None, str),
 #         'repositoryLocalPath': (None, str),

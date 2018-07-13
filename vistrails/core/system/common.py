@@ -85,43 +85,19 @@ def current_user():
 def current_ip():
     """ current_ip() -> str
     Gets current IP address trying to avoid the IPv6 interface """
-    # Try to resolve the local hostname
     try:
-        addresses = socket.getaddrinfo(socket.gethostname(), None)
-    except socket.gaierror:
-        pass
-    else:
+        info = socket.getaddrinfo(socket.gethostname(), None)
         # Try to find an IPv4
-        for i in addresses:
+        for i in info:
             if i[0] == socket.AF_INET:
                 return i[4][0]
         # Return any address
-        for i in addresses:
+        for i in info:
             if i[0] in (socket.AF_INET, socket.AF_INET6):
                 return i[4][0]
-
-    # That didn't work, use whatever address lets you connect to google.com
-    try:
-        addresses = socket.getaddrinfo('google.com', 9, socket.AF_UNSPEC,
-                                       socket.SOCK_STREAM)
-    except socket.gaierror:
-        pass
-    else:
-        for address in addresses:
-            sock = None
-            try:
-                af, socktype, proto, canonname, sa = address
-                sock = socket.socket(af, socktype, proto)
-                sock.settimeout(1)
-                sock.connect(sa)
-                sock.close()
-            except socket.error:
-                pass
-            if sock is not None:
-                return sock.getsockname()[0]
-
-    # Couldn't find anything
-    return ''
+    except Exception, e:
+        debug.unexpected_exception(e)
+        return ''
 
 def current_time():
     """current_time() -> datetime.datetime

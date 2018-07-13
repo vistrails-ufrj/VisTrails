@@ -119,8 +119,6 @@ class DefaultTheme(DefaultCoreTheme):
             QtGui.QColor(*(ColorByName.get_int('black')))), 2)
         self.MODULE_LABEL_SELECTED_PEN = QtGui.QPen(QtGui.QBrush(
             QtGui.QColor(*(ColorByName.get_int('black')))), 2)
-        self.MODULE_LOOP_PEN = QtGui.QPen(QtGui.QBrush(
-            QtGui.QColor(*(ColorByName.get_int('black')))), 1)
         # Brush to draw a module shape at different states
         self.MODULE_BRUSH = QtGui.QBrush(
             QtGui.QColor(*(ColorByName.get_int('light_grey'))))
@@ -149,8 +147,6 @@ class DefaultTheme(DefaultCoreTheme):
         # Pen and brush for un-matched queried modules
         self.GHOSTED_MODULE_PEN = QtGui.QPen(QtGui.QBrush(
                 QtGui.QColor(*(ColorByName.get_int('dark_dim_grey')))), 2)
-        self.GHOSTED_MODULE_LOOP_PEN = QtGui.QPen(QtGui.QBrush(
-                QtGui.QColor(*(ColorByName.get_int('dark_dim_grey')))), 1)
         # Pen to draw module label when it is unmatched due to a query
         self.GHOSTED_MODULE_LABEL_PEN = QtGui.QPen(QtGui.QBrush(
                 QtGui.QColor(*(ColorByName.get_int('dark_dim_grey')))), 2)
@@ -324,8 +320,7 @@ class DefaultTheme(DefaultCoreTheme):
         self.MODULE_DESC_FONT_METRIC = QtGui.QFontMetrics(self.MODULE_DESC_FONT)
         self.MODULE_EDIT_FONT = QtGui.QFont(GRAPHICS_FONT, fixDPI(10))
         self.MODULE_EDIT_FONT_METRIC = QtGui.QFontMetrics(self.MODULE_EDIT_FONT)
-        self.MODULE_LOOP_FONT = QtGui.QFont(GRAPHICS_FONT, fixDPI(10))
-
+    
         # Font for version text
         self.VERSION_FONT = QtGui.QFont(GRAPHICS_FONT, fixDPI(15), QtGui.QFont.Bold)
         self.VERSION_FONT_METRIC = QtGui.QFontMetrics(self.VERSION_FONT)
@@ -520,9 +515,6 @@ class DefaultTheme(DefaultCoreTheme):
         self.PROVENANCE_ICON = QtGui.QIcon(
             vistrails.core.system.vistrails_root_directory() +
             '/gui/resources/images/search_database.png')
-        self.MASHUP_ICON = QtGui.QIcon(
-            vistrails.core.system.vistrails_root_directory() +
-            '/gui/resources/images/mashup.png')
 
         # Toolbar icon for visual query on a vistrail
         self.VISUAL_QUERY_ICON = QtGui.QIcon(
@@ -613,6 +605,9 @@ class DefaultTheme(DefaultCoreTheme):
         self.EXECUTE_MASHUP_ICON = QtGui.QIcon(
             vistrails.core.system.vistrails_root_directory() +
             '/gui/resources/images/mashup_execute.png')
+        self.MASHUP_ICON = QtGui.QIcon(
+            vistrails.core.system.vistrails_root_directory() +
+            '/gui/resources/images/mashup_create.png')
         self.MASHUP_ALIAS_ICON = QtGui.QIcon(
             vistrails.core.system.vistrails_root_directory() +
             '/gui/resources/images/alias.png')

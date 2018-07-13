@@ -109,6 +109,8 @@ class PackageManager(object):
         # Imports standard packages directory
         conf = self._startup.temp_configuration
         old_sys_path = copy.copy(sys.path)
+        if conf.check('packageDirectory'):
+            sys.path.insert(0, conf.packageDirectory)
         try:
             import vistrails.packages
         except ImportError:
@@ -820,9 +822,8 @@ class PackageManager(object):
         # Finds user packages
         userpackages = self.import_user_packages_module()
         if userpackages is not None:
-            for path in userpackages.__path__:
-                search(path,
-                       prefix='userpackages.')
+            search(os.path.dirname(userpackages.__file__),
+                   prefix='userpackages.')
 
         # Finds plugin packages
         try:
