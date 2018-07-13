@@ -104,3 +104,5 @@ class ReshapeTestCase(unittest.TestCase):
                 ]),
             ])
         self.assertEqual(error.keys(), [0])
+        self.assertIn("total size of new array must be unchanged",
+                      error[0].args[0])

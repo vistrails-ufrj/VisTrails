@@ -128,12 +128,12 @@ class CSVTable(TableObject):
         numpy = get_numpy(False)
 
         if numeric and numpy is not None:
-            with open(self.filename) as fp:
-                result = numpy.genfromtxt(fp,
-                                          dtype=numpy.float32,
-                                          delimiter=self.delimiter,
-                                          skip_header=self.skip_lines,
-                                          usecols=[index])
+            result = numpy.loadtxt(
+                    self.filename,
+                    dtype=numpy.float32,
+                    delimiter=self.delimiter,
+                    skiprows=self.skip_lines,
+                    usecols=[index])
         else:
             with open(self.filename, 'rb') as fp:
                 for i in xrange(self.skip_lines):
@@ -176,7 +176,7 @@ class CSVFile(Table):
 
     This module uses Python's csv module to read a table from a file. It is
     able to guess the actual format of the file in most cases, or you can use
-    the `delimiter`, `header_present` and `skip_lines` ports to force how the
+    the 'delimiter', 'header_present' and 'skip_lines' ports to force how the
     file will be read.
     """
     _input_ports = [

@@ -40,7 +40,6 @@
 from __future__ import division
 
 import atexit
-import email.utils
 import json
 import os
 import requests
@@ -174,7 +173,7 @@ def record_vistrail(what, vistrail):
                             nb_abstractions += 1
         usage_report.note(dict(use_vistrail=what,
                                nb_versions=len(vistrail.actionMap),
-                               nb_tags=len(vistrail.get_tagMap()),
+                               nb_tags=len(vistrail.tags),
                                nb_notes=nb_notes,
                                nb_paramexplorations=nb_paramexplorations,
                                nb_upgrades=nb_upgrades,
@@ -247,16 +246,10 @@ def get_server_news():
     file_name = os.path.join(dot_vistrails, 'server_news.json')
     file_exists = os.path.exists(file_name)
 
-    headers = {}
-    if file_exists:
-        mtime = email.utils.formatdate(os.path.getmtime(file_name),
-                                       usegmt=True)
-        headers['If-Modified-Since'] = mtime
-
     try:
         resp = requests.get(
             'https://reprozip-stats.poly.edu/vistrails_news/%s' %
-            vistrails_version(), headers=headers,
+            vistrails_version(),
             timeout=2 if file_exists else 10,
             stream=True, verify=get_ca_certificate())
         resp.raise_for_status()
@@ -265,7 +258,7 @@ def get_server_news():
                 '304 File is up to date, no data returned',
                 response=resp)
     except requests.RequestException, e:
-        if not e.response or e.response.status_code != 304:
+        if not e.response or e.response.code != 304:
             debug.warning("Can't download server news", e)
     else:
         try:

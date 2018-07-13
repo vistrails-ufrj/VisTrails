@@ -48,7 +48,8 @@ from .utils import *
 
 class GMapCell(SpreadsheetCell, OptionsMixin):
     """
-    Renders TabularData geographically on the spreadsheet.
+    GMapCell is a custom Module to view TabularData geographically
+    
     """
 
     SPECS = [('zoom', None, True), 
@@ -84,8 +85,8 @@ class GMapCellWidget(WebViewCellWidget):
       }
 
       #map-canvas, #map_canvas {
-      height: 100%;
-      width: 100%;
+      height: 100vh;
+      width: 100vw;
       }
     </style>
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=visualization&sensor=false"></script>

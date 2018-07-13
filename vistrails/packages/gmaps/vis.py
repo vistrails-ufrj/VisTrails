@@ -123,8 +123,6 @@ class GMapVis(Module, OptionsMixin):
         return (positions, center)
 
 class GMapMarkers(GMapVis, TitlesMixin):
-    """Turns tabular data into markers to be shown on a map.
-    """
     TEMPLATE = Template("""
   var positions = $marker_data;
   var options = $marker_options;
@@ -175,8 +173,6 @@ class GMapValueVis(GMapVis):
         return value_col
 
 class GMapCircles(GMapValueVis):
-    """Turns tabular data into circles of different sizes to be shown on a map.
-    """
     TEMPLATE = Template("""
   var data = $circle_data;
   
@@ -214,8 +210,6 @@ class GMapCircles(GMapValueVis):
         self.set_output("self", vis_data)
 
 class GMapSymbols(GMapValueVis, TitlesMixin):
-    """Turns tabular data into different symbols to be shown on a map.
-    """
     TEMPLATE = Template("""
   var data = $symbol_data;
   var titles = $symbol_titles;
@@ -322,8 +316,6 @@ class GMapSymbols(GMapValueVis, TitlesMixin):
         self.set_output("self", vis_data)
 
 class GMapHeatmap(GMapValueVis):
-    """Turns tabular data into a heatmap layer to be shown on a map.
-    """
     TEMPLATE = Template("""
   var data = $heatmap_data;
   var options = $heatmap_options;

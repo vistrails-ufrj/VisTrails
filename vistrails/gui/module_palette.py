@@ -374,11 +374,7 @@ class QModuleTreeWidgetItemDelegate(QtGui.QItemDelegate):
 
             buttonOption.rect = option.rect
             buttonOption.palette = option.palette
-            if hasattr(QtGui.QStyleOptionButton, 'None_'):
-                buttonOption.features = QtGui.QStyleOptionButton.None_
-            else:
-                buttonOption.features = getattr(QtGui.QStyleOptionButton,
-                                                'None')
+            buttonOption.features = QtGui.QStyleOptionButton.None
 
             style = self.treeView.style()
 

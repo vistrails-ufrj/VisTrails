@@ -78,14 +78,6 @@ class QueueCache(object):
             self._cache[key] = queue
             return queue
 
-    def get_from_params(self, params):
-        need_runtime = params.get('need_runtime') or None
-        if need_runtime:
-            need_runtime = set(need_runtime.split(','))
-        return self.get(params['destination'], params['queue'],
-                        params.get('setup_runtime') or None,
-                        need_runtime)
-
 QueueCache = QueueCache()
 
 
@@ -316,7 +308,9 @@ class BaseSubmitJob(JobMixin, Module):
     def job_get_handle(self, params):
         """Gets a RemoteJob object to monitor a runnning job.
         """
-        queue = QueueCache.get_from_params(params)
+        queue = QueueCache.get(params['destination'], params['queue'],
+                               params.get('setup_runtime') or None,
+                               params.get('need_runtime') or None)
         return RemoteJob(queue, params['job_id'])
 
     def job_finish(self, params):
@@ -324,7 +318,9 @@ class BaseSubmitJob(JobMixin, Module):
 
         Gets the exit code from the server.
         """
-        queue = QueueCache.get_from_params(params)
+        queue = QueueCache.get(params['destination'], params['queue'],
+                               params.get('setup_runtime') or None,
+                               params.get('need_runtime') or None)
         with ServerLogger.hide_output():
             status, target, arg = queue.status(params['job_id'])
         assert status == tej.RemoteQueue.JOB_DONE
@@ -334,7 +330,9 @@ class BaseSubmitJob(JobMixin, Module):
     def job_set_results(self, params):
         """Sets the output ports once the job is finished.
         """
-        queue = QueueCache.get_from_params(params)
+        queue = QueueCache.get(params['destination'], params['queue'],
+                               params.get('setup_runtime') or None,
+                               params.get('need_runtime') or None)
         self.set_output('exitcode', params['exitcode'])
         self.set_output('job', RemoteJob(queue, params['job_id']))
 
@@ -376,7 +374,9 @@ class SubmitJob(AssembleDirectoryMixin, BaseSubmitJob):
     def job_start(self, params):
         """Sends the directory and submits the job.
         """
-        queue = QueueCache.get_from_params(params)
+        queue = QueueCache.get(params['destination'], params['queue'],
+                               params.get('setup_runtime') or None,
+                               params.get('need_runtime') or None)
 
         # First, check if job already exists
         try:
@@ -421,7 +421,9 @@ class SubmitShellJob(BaseSubmitJob):
     def job_start(self, params):
         """Creates a temporary job with the given source, upload and submit it.
         """
-        queue = QueueCache.get_from_params(params)
+        queue = QueueCache.get(params['destination'], params['queue'],
+                               params.get('setup_runtime') or None,
+                               params.get('need_runtime') or None)
 
         # First, check if job already exists
         try:
@@ -457,7 +459,9 @@ class SubmitShellJob(BaseSubmitJob):
 
         temp_dir = self.interpreter.filePool.create_directory(
                 prefix='vt_tmp_shelljobout_').name
-        queue = QueueCache.get_from_params(params)
+        queue = QueueCache.get(params['destination'], params['queue'],
+                               params.get('setup_runtime') or None,
+                               params.get('need_runtime') or None)
         queue.download(params['job_id'], ['_stderr', '_stdout'],
                        directory=temp_dir)
         self.set_output('stderr',

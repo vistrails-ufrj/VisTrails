@@ -47,3 +47,9 @@ def package_requirements():
     
     require_python_module('tensorflow', {
                           'pip': 'tensorflow==1.5.0'})
+
+    require_python_module('pydot', {
+                          'pip': 'pydot==1.2.3',
+                          'linux-debian': 'graphviz',
+                          'linux-ubuntu': 'graphviz',
+                          'linux-fedora': 'graphviz'})

@@ -120,9 +120,7 @@ class Run(Module):
         stderr = self.interpreter.filePool.create_file(prefix='vt_rpz_stderr_',
                                                        suffix='.txt')
 
-        args = [python, '-c',
-                'from reprounzip.plugins.vistrails import run_from_vistrails; '
-                'run_from_vistrails()',
+        args = [python, '-m', 'reprounzip.plugins.vistrails',
                 REPROUNZIP_VISTRAILS_INTERFACE_VERSION,
                 experiment.unpacker, experiment.path,
                 '%d' % self.get_input('run_number')]

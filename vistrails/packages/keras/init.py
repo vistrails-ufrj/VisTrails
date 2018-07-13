@@ -49,6 +49,10 @@ from keras.layers import Activation
 
 from pandas import read_csv
 
+import matplotlib
+import matplotlib.pyplot as plt
+matplotlib.use('Qt4Agg', warn=False)
+
 ###############################################################################
 # Env variables
 import os
@@ -195,14 +199,12 @@ class Sequential(Module):
     """
     _settings = ModuleSettings(namespace="models")
     _input_ports = [("input_dim", "basic:Integer", {"shape": "circle", "defaults": [0]})]
-    _output_ports = [("model", "basic:List", {"shape": "diamond"}),
-                     ("input_dim", "basic:Integer", {"shape": "circle"})]
+    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
 
     def compute(self):
         model = KerasSequential()
         input_dim = self.get_input("input_dim")
-        self.set_output("model", model)
-        self.set_output("input_dim", input_dim)
+        self.set_output("model", (model, input_dim))
 
 class Compile(Module):
     """Compile model before train.
@@ -241,6 +243,25 @@ class Fit(Module):
         model = self.get_input("model")
 
         model.fit(data, labels, epochs=epochs, batch_size=batch_size)
+
+        print(model.summary())
+        # summarize history for accuracy
+        plt.plot(model.history['acc'])
+        plt.plot(model.history['val_acc'])
+        plt.title('model accuracy')
+        plt.ylabel('accuracy')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'test'], loc='upper left')
+        plt.show()
+        # summarize history for loss
+        plt.plot(model.history['loss'])
+        plt.plot(model.history['val_loss'])
+        plt.title('model loss')
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'test'], loc='upper left')
+        plt.show()
+
         self.set_output("model", model)
 
 class Evaluate(Module):
@@ -274,17 +295,16 @@ class Dense(Module):
     _settings = ModuleSettings(namespace="layers")
     _input_ports = [("model", "basic:List", {"shape": "diamond"}),
                     ("units", "basic:Integer", {"shape": "circle"}),
-                    ("activation", "basic:String", {"shape": "circle", "defaults": ["nothing"]}),
-                    ("input_dim", "basic:Integer", {"shape": "circle", "defaults": [0]})]
+                    ("activation", "basic:String", {"shape": "circle", "defaults": ["nothing"]})]
     _output_ports = [("model", "basic:List", {"shape": "diamond"})]
 
     def compute(self):
         units = self.get_input("units")
-        input_dim = self.get_input("input_dim")
         activation = self.get_input("activation")
         model = self.get_input("model")
-
-        if input_dim != 0:
+        
+        if isinstance(model, tuple):
+            model, input_dim = model
             model.add(KerasDense(units=units, input_dim=input_dim))
         else:
             model.add(KerasDense(units=units))
@@ -300,17 +320,15 @@ class LSTM(Module):
     _settings = ModuleSettings(namespace="layers")
     _input_ports = [("model", "basic:List", {"shape": "diamond"}),
                     ("units", "basic:Integer", {"shape": "circle"}),
-                    ("activation", "basic:String", {"shape": "circle", "defaults": ["nothing"]}),
-                    ("input_dim", "basic:Integer", {"shape": "circle", "defaults": [0]})]
+                    ("activation", "basic:String", {"shape": "circle", "defaults": ["nothing"]})]
     _output_ports = [("model", "basic:List", {"shape": "diamond"})]
 
     def compute(self):
         units = self.get_input("units")
-        input_dim = self.get_input("input_dim")
         activation = self.get_input("activation")
         model = self.get_input("model")
-
-        if input_dim != 0:
+        if isinstance(model, tuple):
+            model, input_dim = model
             model.add(KerasLSTM(units=units, input_dim=input_dim))
         else:
             model.add(KerasLSTM(units=units))
@@ -325,18 +343,17 @@ class Embedding(Module):
     """
     _settings = ModuleSettings(namespace="layers")
     _input_ports = [("model", "basic:List", {"shape": "diamond"}),
-                    ("top_words", "basic:Integer", {"shape": "circle"}),
-                    ("embedding_vector_length", "basic:Integer", {"shape": "circle"}),
+                    ("output_dim", "basic:Integer", {"shape": "circle"}),
                     ("input_length", "basic:Integer", {"shape": "circle"})]
     _output_ports = [("model", "basic:List", {"shape": "diamond"})]
 
     def compute(self):
-        top_words = self.get_input("top_words")
-        embedding_vector_length = self.get_input("embedding_vector_length")
+        output_dim = self.get_input("output_dim")
         input_length = self.get_input("input_length")
         model = self.get_input("model")
-
-        model.add(KerasEmbedding(top_words, embedding_vector_length, input_length=input_length))
-        self.set_output("model", model)
+        if isinstance(model, tuple):
+            model, input_dim = model
+            model.add(KerasEmbedding(input_dim, output_dim, input_length=input_length))
+            self.set_output("model", model)
 
 _modules = [SplitData, Multplex, Imdb, ReadCSV, Sequential, Compile, Fit, Evaluate, Dense, LSTM, Embedding]

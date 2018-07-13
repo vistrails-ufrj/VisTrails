@@ -66,8 +66,6 @@ def unexpected_exception(e, tb=None, frame=None):
     """
     if tb is None:
         tb = sys.exc_info()[2]
-        if tb is None:
-            return
     if frame is None:
         tb_it = tb
         while tb_it.tb_next is not None:
@@ -77,7 +75,9 @@ def unexpected_exception(e, tb=None, frame=None):
     # Whether to use the debugger
     try:
         from vistrails.core.configuration import get_vistrails_configuration
-        debugger = get_vistrails_configuration().check('developerDebugger')
+        debugger = getattr(get_vistrails_configuration(),
+                           'developerDebugger',
+                           False)
     except Exception:
         debugger = False
     if not debugger:
