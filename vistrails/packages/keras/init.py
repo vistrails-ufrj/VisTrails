@@ -55,10 +55,52 @@ import os
 DATASET_DIR = os.path.dirname(os.path.abspath(__file__)) + '/datasets'
 
 ###############################################################################
-# Example datasets
+# Utils
+
+class SplitData(Module):
+    """Given an index or percentage, divide the data into two parts
+    """
+    _settings = ModuleSettings(namespace="utils")
+    _input_ports = [("data", "basic:List", {"shape": "circle"}),
+                    ("proportion", "basic:Float", {"shape": "circle"})]
+
+    _output_ports = [("A", "basic:List", {"shape": "circle"}),
+                      ("B", "basic:List", {"shape": "circle"})]
+    
+    def compute(self):
+        data = self.get_input("data")
+
+        idx = self.get_input("proportion")
+
+        if idx > 1:
+            idx = int(idx)
+        else:
+            idx = int(idx*len(data))
+
+        self.set_output("A", data[:idx])
+        self.set_output("B", data[idx:])
+
+
+class Multplex(Module):
+    """Returns copies of input object 
+    """
+    _settings = ModuleSettings(namespace="utils")
+    _input_ports = [("object", "basic:List", {"shape": "circle"})]
+
+    _output_ports = [("gate_1", "basic:List", {"shape": "circle"}),
+                     ("gate_2", "basic:List", {"shape": "circle"}),
+                     ("gate_3", "basic:List", {"shape": "circle"}),
+                     ("gate_4", "basic:List", {"shape": "circle"})]
+    
+    def compute(self):
+        obj = self.get_input("object")
+        self.set_output("gate_1", obj)
+        self.set_output("gate_2", obj)
+        self.set_output("gate_3", obj)
+        self.set_output("gate_4", obj)
 
 class ReadCSV(Module):
-    """Return pandas dataframe from CSV file
+    """Returns pandas dataframe from CSV file
     """
     _settings = ModuleSettings(namespace="datasets")
     _input_ports = [("file_path", "basic:File", {"shape": "circle"}),
@@ -88,6 +130,8 @@ class ReadCSV(Module):
         data = read_csv(file_path, delimiter=delimeter, header=header, parse_dates=parse_dates, index_col=index_col, chunksize=chunk_size)
         self.set_output("data", data)
 
+###############################################################################
+# Example datasets
 
 class Imdb(Module):
     """Example dataset: imdb.
@@ -133,7 +177,7 @@ class Imdb(Module):
         self.max_review_length = self.get_input("max_review_length")
         self.top_words = self.get_input("top_words")
         (X_train, y_train), (X_test, y_test) = self.loadData()
-        print(X_train,y_train)
+
         if self.max_review_length != 0:
             X_train = sequence.pad_sequences(X_train, maxlen=self.max_review_length)
             X_test = sequence.pad_sequences(X_test, maxlen=self.max_review_length)
@@ -195,9 +239,31 @@ class Fit(Module):
         batch_size = self.get_input("batch_size")
         epochs = self.get_input("epochs")
         model = self.get_input("model")
-        print('das',data)
+
         model.fit(data, labels, epochs=epochs, batch_size=batch_size)
         self.set_output("model", model)
+
+class Evaluate(Module):
+    """Train the compiled model.
+    """
+    _settings = ModuleSettings(namespace="models")
+    _input_ports = [("model", "basic:List", {"shape": "diamond"}),
+                    ("data", "basic:List", {"shape": "circle"}),
+                    ("labels", "basic:List", {"shape": "circle"}),
+                    ("batch_size", "basic:Integer", {"shape": "circle", "defaults": [32]})]
+    _output_ports = [("score", "basic:List", {"shape": "square"}),
+                     ("accuracy", "basic:List", {"shape": "square"})]
+
+    def compute(self):
+        data = self.get_input("data")
+        labels = self.get_input("labels")
+        batch_size = self.get_input("batch_size")
+        model = self.get_input("model")
+
+        score, acc = model.evaluate(data, labels, batch_size=batch_size)
+
+        self.set_output("score", score)
+        self.set_output("accuracy", acc)
 
 ###############################################################################
 # Layer functions
@@ -273,4 +339,4 @@ class Embedding(Module):
         model.add(KerasEmbedding(top_words, embedding_vector_length, input_length=input_length))
         self.set_output("model", model)
 
-_modules = [Imdb, ReadCSV, Sequential, Compile, Fit, Dense, LSTM, Embedding]
+_modules = [SplitData, Multplex, Imdb, ReadCSV, Sequential, Compile, Fit, Evaluate, Dense, LSTM, Embedding]
