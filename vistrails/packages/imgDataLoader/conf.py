@@ -74,11 +74,11 @@ OPTIMIZER = {
 # Folders with images and labelfiles
 IMG_DATASET = {
     "hot_encode_labels": True,
-    "train": "/home/motumbo/Desktop/fabricio/dataset/cifar-100/train-filtered.csv",
-    "validation": "/home/motumbo/Desktop/fabricio/dataset/cifar-100/test-filtered.csv",
-    "test": "/home/motumbo/Desktop/fabricio/dataset/cifar-100/test-filtered.csv"
+    "train": "/home/gabriel/Downloads/Telegram Desktop/vistrails-src-2.2.4-1519abc0ae2b/vistrails/packages/imgDataLoader/labels.csv",
+    "validation": "/home/gabriel/Downloads/Telegram Desktop/vistrails-src-2.2.4-1519abc0ae2b/vistrails/packages/imgDataLoader/labels.csv",
+    "test": "/home/gabriel/Downloads/Telegram Desktop/vistrails-src-2.2.4-1519abc0ae2b/vistrails/packages/imgDataLoader/labels.csv"
 }
 
 # Folder where experiments will be stored
-EXPERIMENT_PATH = "/home/motumbo/Desktop/fabricio/experiment/" \
+EXPERIMENT_PATH = "/home/gabriel/Desktop/gabriel/experiment/" \
                   + datetime.now().strftime("%Y-%m-%d_%H:%M")
