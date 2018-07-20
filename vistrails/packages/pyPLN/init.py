@@ -413,6 +413,25 @@ class StanfordNERTagger(Module):
 
 ##############
 
+# Java ClassPath and CoreNLP must be properly set up
+class CoreNLP(Module):
+	_settings = ModuleSettings(namespace="Stanford")
+	_input_ports = [IPort('annotator', 'basic:String', default = 'all', entry_type = 'enum',
+							values = ['all', 'tokenize', 'cleanxml', 'ssplit', 'pos', 'lemma', 'ner', 'regexner', 'sentiment', 'parse', 'depparse', 'dcoref', 'relation', 'natlog', 'quote']),
+					IPort('mem_usg', 'basic:String', default = '-Xmx2g'),
+					IPort('input_file', 'basic:File')
+					]
+
+	def compute(self):
+		annotator = IPort.get_input('annotator')
+		mem_usg = IPort.get_input('mem_usg')
+		input_file = IPort.get_input('input_file')
+
+		cmd = ['java', mem_usg, 'edu.stanford.nlp.pipeline.StanfordCoreNLP', '-annotators', annotators, '-file', input_file]
+		cmdline = list2cmdline(cmd)
+
+		print cmdline
+
 
 
 
@@ -420,5 +439,5 @@ _modules = [UpdateNltkCorpus, ShowNLTKCorpus, LoadMyCorpus, LoadNLTKCorpus, Corp
 			Tokens, Tokenizer, 
 			PorterStemmer, LancasterStemmer, WordNetLemmatizer,
 			Normalize, Rmv_Stopwords,
-			defaultPOStagger, StanfordPOSTagger, StanfordNERTagger
+			defaultPOStagger, StanfordPOSTagger, StanfordNERTagger, CoreNLP,
 			]
