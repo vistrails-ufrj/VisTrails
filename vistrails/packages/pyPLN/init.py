@@ -423,15 +423,215 @@ class CoreNLP(Module):
 					]
 
 	def compute(self):
-		annotator = IPort.get_input('annotator')
-		mem_usg = IPort.get_input('mem_usg')
-		input_file = IPort.get_input('input_file')
+		annotator = self.get_input('annotator')
+		mem_usg = self.get_input('mem_usg')
+		input_file = self.get_input('input_file')
 
 		cmd = ['java', mem_usg, 'edu.stanford.nlp.pipeline.StanfordCoreNLP', '-annotators', annotators, '-file', input_file]
 		cmdline = list2cmdline(cmd)
 
 		print cmdline
 
+
+# Semantics
+
+class WordEmbeddings(Module):
+	_settings = ModuleSettings(namespace="Indra")
+	_input_ports = [IPort(name = 'corpus', signature = 'basic:String', default = 'googlenews', entry_type = 'enum',
+							values = ['googlenews', 'wiki-2018', 'wiki-2014']),
+					IPort(name='lang',  signature = 'basic:String', default = 'EN', entry_type = 'enum',
+							values = ['EN','DE','ES', 'FR', 'PT', 'IT', 'SV', 'ZH', 'NL', 'RU', 'KO', 'JA', 'AR', 'FA', 'EL']),
+					IPort(name = 'model', signature = 'basic:String', default = 'W2V', entry_type = 'enum',
+						values = ['W2V']),
+					IPort(name = 'post', signature = 'basic:String', default = 'http://labcores.ppgi.ufrj.br/indra/'),
+					IPort(name = 'terms', signature = 'basic:List'),
+					]
+	_output_ports = [OPort(name = 'output_vector', signature = 'basic:Float')]
+
+	def compute(self):
+		import requests
+
+		corpus = self.get_input('corpus')
+		lang = self.get_input('lang')
+		model = self.get_input('model')
+		terms = self.get_input('terms')
+		endpoint = self.get_input('post')
+
+		data = {'corpus':corpus,
+				'model': model,
+				'language': lang,
+				'terms': terms}
+
+		r = requests.post(endpoint+'vectors', json = data ).json()
+
+		print 'Word Embeddings'
+		print r
+
+class NearestNeighborsVectors(Module):
+	_settings = ModuleSettings(namespace="Indra")
+	_input_ports = [IPort(name = 'corpus', signature = 'basic:String', default = 'googlenews', entry_type = 'enum',
+							values = ['googlenews', 'wiki-2018', 'wiki-2014']),
+					IPort(name='lang',  signature = 'basic:String', default = 'EN', entry_type = 'enum',
+							values = ['EN','DE','ES', 'FR', 'PT', 'IT', 'SV', 'ZH', 'NL', 'RU', 'KO', 'JA', 'AR', 'FA', 'EL']),
+					IPort(name = 'model', signature = 'basic:String', default = 'W2V', entry_type = 'enum',
+						values = ['W2V']),
+					IPort(name = 'post', signature = 'basic:String', default = 'http://labcores.ppgi.ufrj.br/indra/'),
+					IPort(name = 'topk', signature = 'basic:Integer', default = 10),
+					IPort(name = 'terms', signature = 'basic:List'),
+					]
+	_output_ports = [OPort(name = 'output_vector', signature = 'basic:Float')]
+
+	def compute(self):
+		import requests
+
+		corpus = self.get_input('corpus')
+		lang = self.get_input('lang')
+		model = self.get_input('model')
+		topk = self.get_input('topk')
+		terms = self.get_input('terms')
+		endpoint = self.get_input('post')
+
+		data = {'corpus':corpus,
+				'model': model,
+				'language': lang,
+				"topk": topk,
+				'terms': terms}
+
+		r = requests.post(endpoint+'neighbors/vectors', json = data ).json()
+		print 'NearestNeighborsVectors'
+		print r
+
+
+class NearestNeighborsRelatedness(Module):
+	_settings = ModuleSettings(namespace="Indra")
+	_input_ports = [IPort(name = 'corpus', signature = 'basic:String', default = 'googlenews', entry_type = 'enum',
+							values = ['googlenews', 'wiki-2018', 'wiki-2014']),
+					IPort(name='lang',  signature = 'basic:String', default = 'EN', entry_type = 'enum',
+							values = ['EN','DE','ES', 'FR', 'PT', 'IT', 'SV', 'ZH', 'NL', 'RU', 'KO', 'JA', 'AR', 'FA', 'EL']),
+					IPort(name = 'model', signature = 'basic:String', default = 'W2V', entry_type = 'enum',
+						values = ['W2V']),
+					IPort(name = 'post', signature = 'basic:String', default = 'http://labcores.ppgi.ufrj.br/indra/'),
+					IPort(name = 'topk', signature = 'basic:Integer', default = 10),
+					IPort(name = 'scoreFunction', signature = 'basic:String', default = 'COSINE'),
+					IPort(name = 'terms', signature = 'basic:List'),
+					]
+	_output_ports = [OPort(name = 'output_vector', signature = 'basic:Float')]
+
+	def compute(self):
+		import requests
+
+		corpus = self.get_input('corpus')
+		lang = self.get_input('lang')
+		model = self.get_input('model')
+		topk = self.get_input('topk')
+		terms = self.get_input('terms')
+		endpoint = self.get_input('post')
+
+		data = {'corpus':corpus,
+				'model': model,
+				'language': lang,
+				"topk": topk,
+				'terms': terms}
+
+		r = requests.post(endpoint+'neighbors/relatedness', json = data ).json()
+		print 'NearestNeighborsRelatedness'
+		print r
+
+
+class PairSemanticSimilarity(Module):
+	_settings = ModuleSettings(namespace="Indra")
+	_input_ports = [IPort(name = 'corpus', signature = 'basic:String', default = 'googlenews', entry_type = 'enum',
+							values = ['googlenews', 'wiki-2018', 'wiki-2014']),
+					IPort(name='lang',  signature = 'basic:String', default = 'EN', entry_type = 'enum',
+							values = ['EN','DE','ES', 'FR', 'PT', 'IT', 'SV', 'ZH', 'NL', 'RU', 'KO', 'JA', 'AR', 'FA', 'EL']),
+					IPort(name = 'model', signature = 'basic:String', default = 'W2V', entry_type = 'enum',
+						values = ['W2V']),
+					IPort(name = 'scoreFunction', signature = 'basic:String', default = 'COSINE'),
+					IPort(name = 'post', signature = 'basic:String', default = 'http://labcores.ppgi.ufrj.br/indra/'),
+					IPort(name = 'pairs', signature = 'basic:List'),
+					# pairs in the format of {'t2' : t2, 't1' : t1}
+					]
+	_output_ports = [OPort(name = 'output_vector', signature = 'basic:Float')]
+
+	def compute(self):
+		import requests
+
+		corpus = self.get_input('corpus')
+		lang = self.get_input('lang')
+		model = self.get_input('model')
+		pairs = self.get_input('pairs')
+		endpoint = self.get_input('post')
+		scoreFunction = self.get_input('scoreFunction')
+
+		data = {'corpus':corpus,
+				'model': model,
+				'language': lang,
+				'scoreFunction' : scoreFunction,
+				'pairs': pairs,
+				}
+
+		r = requests.post(endpoint+'relatedness', json = data).json()
+		print "PairSemanticSimilarity"
+		print r
+
+class OneManySemanticSimilarity(Module):
+	_settings = ModuleSettings(namespace="Indra")
+	_input_ports = [IPort(name = 'corpus', signature = 'basic:String', default = 'googlenews', entry_type = 'enum',
+							values = ['googlenews', 'wiki-2018', 'wiki-2014']),
+					IPort(name='lang',  signature = 'basic:String', default = 'EN', entry_type = 'enum',
+							values = ['EN','DE','ES', 'FR', 'PT', 'IT', 'SV', 'ZH', 'NL', 'RU', 'KO', 'JA', 'AR', 'FA', 'EL']),
+					IPort(name = 'model', signature = 'basic:String', default = 'W2V', entry_type = 'enum',
+						values = ['W2V']),
+					IPort(name = 'scoreFunction', signature = 'basic:String', default = 'COSINE'),
+					IPort(name = 'post', signature = 'basic:String', default = 'http://labcores.ppgi.ufrj.br/indra/'),
+					IPort(name = 'one', signature = 'basic:String'),
+					IPort(name = 'many', signature = 'basic:List'),
+					]
+	_output_ports = [OPort(name = 'output_vector', signature = 'basic:Float')]
+
+	def compute(self):
+		import requests
+
+		corpus = self.get_input('corpus')
+		lang = self.get_input('lang')
+		model = self.get_input('model')
+		one = self.get_input('one')
+		many = self.get_input('many')
+		endpoint = self.get_input('post')
+		scoreFunction = self.get_input('scoreFunction')
+
+		data = {'corpus':corpus,
+				'model': model,
+				'language': lang,
+				'scoreFunction' : scoreFunction,
+				'one' : one,
+				'many': many,
+				}
+
+		r = requests.post(endpoint+'relatedness/otm', json = data).json()
+		print 'OneManySemanticSimilarity'
+		print r
+
+# import requests
+
+# url = "http://labcores.ppgi.ufrj.br/indra/relatedness"
+
+# param = {  
+#    "corpus":"wiki-2018",
+#    "model":"W2V",
+#    "language":"EN",
+#    "scoreFunction":"COSINE",
+#    "pairs":[  
+#       {  
+#                  "t2":"hammer",
+#                  "t1":"hammered"     
+#       }
+#    ]   
+# }
+
+
+# res = requests.post(url, json=param)
+# print(res.json())
 
 
 
@@ -440,4 +640,6 @@ _modules = [UpdateNltkCorpus, ShowNLTKCorpus, LoadMyCorpus, LoadNLTKCorpus, Corp
 			PorterStemmer, LancasterStemmer, WordNetLemmatizer,
 			Normalize, Rmv_Stopwords,
 			defaultPOStagger, StanfordPOSTagger, StanfordNERTagger, CoreNLP,
+			WordEmbeddings, NearestNeighborsVectors ,NearestNeighborsRelatedness ,PairSemanticSimilarity ,OneManySemanticSimilarity
 			]
+
