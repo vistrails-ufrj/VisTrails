@@ -585,7 +585,8 @@ class OneManySemanticSimilarity(Module):
 					IPort(name = 'scoreFunction', signature = 'basic:String', default = 'COSINE'),
 					IPort(name = 'post', signature = 'basic:String', default = 'http://labcores.ppgi.ufrj.br/indra/'),
 					IPort(name = 'one', signature = 'basic:String'),
-					IPort(name = 'many', signature = 'basic:List'),
+					IPort(name = 'manyString', signature = 'basic:String'),
+					IPort(name = 'manyList', signature = 'basic:List', optional = True),
 					]
 	_output_ports = [OPort(name = 'output_vector', signature = 'basic:Float')]
 
@@ -596,7 +597,10 @@ class OneManySemanticSimilarity(Module):
 		lang = self.get_input('lang')
 		model = self.get_input('model')
 		one = self.get_input('one')
-		many = self.get_input('many')
+		manyString = self.get_input('manyString').split(',')
+		many = [x.strip() for x in manyString]
+		if (self.has_input('manyList')) :
+			many = self.get_input('manyList')
 		endpoint = self.get_input('post')
 		scoreFunction = self.get_input('scoreFunction')
 
