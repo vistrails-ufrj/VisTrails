@@ -548,7 +548,7 @@ class PairSemanticSimilarity(Module):
 						values = ['W2V']),
 					IPort(name = 'scoreFunction', signature = 'basic:String', default = 'COSINE'),
 					IPort(name = 'post', signature = 'basic:String', default = 'http://labcores.ppgi.ufrj.br/indra/'),
-					IPort(name = 'pairs', signature = 'basic:List'),
+					IPort(name = 'pairs', signature = 'basic:String'),
 					# pairs in the format of {'t2' : t2, 't1' : t1}
 					]
 	_output_ports = [OPort(name = 'output_vector', signature = 'basic:Float')]
@@ -559,7 +559,10 @@ class PairSemanticSimilarity(Module):
 		corpus = self.get_input('corpus')
 		lang = self.get_input('lang')
 		model = self.get_input('model')
-		pairs = self.get_input('pairs')
+		
+		pairs = str(self.get_input('pairs'))
+		pairs = self.parsePairString(pairs)
+
 		endpoint = self.get_input('post')
 		scoreFunction = self.get_input('scoreFunction')
 
@@ -573,6 +576,23 @@ class PairSemanticSimilarity(Module):
 		r = requests.post(endpoint+'relatedness', json = data).json()
 		print "PairSemanticSimilarity"
 		print r
+
+	def parsePairString(self, string):
+		splited_pairs = string.split(';')
+
+		splited_terms_pairs = [x.split(',') for x in splited_pairs]
+
+		print splited_pairs
+		pairs = []
+		print splited_terms_pairs
+		for pair in splited_terms_pairs:
+			print pair
+			dic = {'t'+str(idx+1) : x for idx, x in enumerate(pair)}
+			print dic
+			pairs.append(dic)
+
+		print pairs
+		return pairs
 
 class OneManySemanticSimilarity(Module):
 	_settings = ModuleSettings(namespace="Indra")
