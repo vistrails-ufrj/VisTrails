@@ -38,14 +38,13 @@ from vistrails.core.modules.config import ModuleSettings, IPort, OPort
 from vistrails.core.modules.vistrails_module import Module, ModuleError
 from vistrails.core.packagemanager import get_package_manager
 
+from .layers import _layers
+from .activations import _activations
+
 import numpy as np
 from keras.datasets import imdb
 from keras.preprocessing import sequence
 from keras.models import Sequential as KerasSequential
-from keras.layers import Dense as KerasDense
-from keras.layers import LSTM as KerasLSTM
-from keras.layers.embeddings import Embedding as KerasEmbedding
-from keras.layers import Activation
 
 from pandas import read_csv
 
@@ -61,18 +60,27 @@ DATASET_DIR = os.path.dirname(os.path.abspath(__file__)) + '/datasets'
 ###############################################################################
 # Utils
 
-class SplitData(Module):
+class Sample(Module):
     """Given an index or percentage, divide the data into two parts
     """
     _settings = ModuleSettings(namespace="utils")
-    _input_ports = [("data", "basic:List", {"shape": "circle"}),
+    _input_ports = [("X_train", "basic:List", {"shape": "circle"}),
+                    ("y_train", "basic:List", {"shape": "circle"}),
+                    ("X_test", "basic:List", {"shape": "circle"}),
+                    ("y_test", "basic:List", {"shape": "circle"}),
                     ("proportion", "basic:Float", {"shape": "circle"})]
+    
+    _output_ports = [("X_train", "basic:List", {"shape": "circle"}),
+                     ("y_train", "basic:List", {"shape": "circle"}),
+                     ("X_test", "basic:List", {"shape": "circle"}),
+                     ("y_test", "basic:List", {"shape": "circle"})]
 
-    _output_ports = [("A", "basic:List", {"shape": "circle"}),
-                      ("B", "basic:List", {"shape": "circle"})]
     
     def compute(self):
-        data = self.get_input("data")
+        X_train = self.get_input("X_train")
+        y_train = self.get_input("y_train")
+        X_test = self.get_input("X_test")
+        y_test = self.get_input("y_test")
 
         idx = self.get_input("proportion")
 
@@ -81,27 +89,14 @@ class SplitData(Module):
         else:
             idx = int(idx*len(data))
 
-        self.set_output("A", data[:idx])
-        self.set_output("B", data[idx:])
-
-
-class Multplex(Module):
-    """Returns copies of input object 
-    """
-    _settings = ModuleSettings(namespace="utils")
-    _input_ports = [("object", "basic:List", {"shape": "circle"})]
-
-    _output_ports = [("gate_1", "basic:List", {"shape": "circle"}),
-                     ("gate_2", "basic:List", {"shape": "circle"}),
-                     ("gate_3", "basic:List", {"shape": "circle"}),
-                     ("gate_4", "basic:List", {"shape": "circle"})]
-    
-    def compute(self):
-        obj = self.get_input("object")
-        self.set_output("gate_1", obj)
-        self.set_output("gate_2", obj)
-        self.set_output("gate_3", obj)
-        self.set_output("gate_4", obj)
+        if X_train != None:
+            self.set_output("X_train", X_train[:idx])
+        if y_train != None:
+            self.set_output("y_train", y_train[:idx])
+        if X_test != None:
+            self.set_output("X_test",  X_test[:idx])
+        if y_test != None:
+            self.set_output("y_test",  y_test[:idx])
 
 class ReadCSV(Module):
     """Returns pandas dataframe from CSV file
@@ -224,6 +219,7 @@ class Compile(Module):
         model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
         self.set_output("model", model)
 
+
 class Fit(Module):
     """Train the compiled model.
     """
@@ -231,6 +227,7 @@ class Fit(Module):
     _input_ports = [("model", "basic:List", {"shape": "diamond"}),
                     ("data", "basic:List", {"shape": "circle"}),
                     ("labels", "basic:List", {"shape": "circle"}),
+                    ("validation_split", "basic:Float", {"shape": "circle", "defaults": [0.0]}),
                     ("epochs", "basic:Integer", {"shape": "circle"}),
                     ("batch_size", "basic:Integer", {"shape": "circle", "defaults": [32]})]
     _output_ports = [("model", "basic:List", {"shape": "diamond"})]
@@ -238,26 +235,18 @@ class Fit(Module):
     def compute(self):
         data = self.get_input("data")
         labels = self.get_input("labels")
+        split = self.get_input("validation_split")
         batch_size = self.get_input("batch_size")
         epochs = self.get_input("epochs")
         model = self.get_input("model")
 
-        model.fit(data, labels, epochs=epochs, batch_size=batch_size)
-
-        print(model.summary())
+        callbacks = model.fit(data, labels, epochs=epochs, batch_size=batch_size, validation_split=split)
         # summarize history for accuracy
-        plt.plot(model.history['acc'])
-        plt.plot(model.history['val_acc'])
+        plt.plot(callbacks.history['acc'])
+        if split != 0.0:
+            plt.plot(callbacks.history['val_acc'])
         plt.title('model accuracy')
         plt.ylabel('accuracy')
-        plt.xlabel('epoch')
-        plt.legend(['train', 'test'], loc='upper left')
-        plt.show()
-        # summarize history for loss
-        plt.plot(model.history['loss'])
-        plt.plot(model.history['val_loss'])
-        plt.title('model loss')
-        plt.ylabel('loss')
         plt.xlabel('epoch')
         plt.legend(['train', 'test'], loc='upper left')
         plt.show()
@@ -286,74 +275,4 @@ class Evaluate(Module):
         self.set_output("score", score)
         self.set_output("accuracy", acc)
 
-###############################################################################
-# Layer functions
-
-class Dense(Module):
-    """Fully-connected layer to Keras model.
-    """
-    _settings = ModuleSettings(namespace="layers")
-    _input_ports = [("model", "basic:List", {"shape": "diamond"}),
-                    ("units", "basic:Integer", {"shape": "circle"}),
-                    ("activation", "basic:String", {"shape": "circle", "defaults": ["nothing"]})]
-    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
-
-    def compute(self):
-        units = self.get_input("units")
-        activation = self.get_input("activation")
-        model = self.get_input("model")
-        
-        if isinstance(model, tuple):
-            model, input_dim = model
-            model.add(KerasDense(units=units, input_dim=input_dim))
-        else:
-            model.add(KerasDense(units=units))
-
-        if activation != "nothing":
-            model.add(Activation(activation))
-
-        self.set_output("model", model)
-
-class LSTM(Module):
-    """Fully-connected layer to Keras model.
-    """
-    _settings = ModuleSettings(namespace="layers")
-    _input_ports = [("model", "basic:List", {"shape": "diamond"}),
-                    ("units", "basic:Integer", {"shape": "circle"}),
-                    ("activation", "basic:String", {"shape": "circle", "defaults": ["nothing"]})]
-    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
-
-    def compute(self):
-        units = self.get_input("units")
-        activation = self.get_input("activation")
-        model = self.get_input("model")
-        if isinstance(model, tuple):
-            model, input_dim = model
-            model.add(KerasLSTM(units=units, input_dim=input_dim))
-        else:
-            model.add(KerasLSTM(units=units))
-
-        if activation != "nothing":
-            model.add(Activation(activation))
-
-        self.set_output("model", model)
-
-class Embedding(Module):
-    """Embedding layer to Keras model.
-    """
-    _settings = ModuleSettings(namespace="layers")
-    _input_ports = [("model", "basic:List", {"shape": "diamond"}),
-                    ("output_dim", "basic:Integer", {"shape": "circle"}),
-                    ("input_length", "basic:Integer", {"shape": "circle"})]
-    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
-
-    def compute(self):
-        output_dim = self.get_input("output_dim")
-        input_length = self.get_input("input_length")
-        model = self.get_input("model")
-        if isinstance(model, tuple):
-            model, input_dim = model
-            model.add(KerasEmbedding(input_dim, output_dim, input_length=input_length))
-            self.set_output("model", model)
-
-_modules = [SplitData, Multplex, Imdb, ReadCSV, Sequential, Compile, Fit, Evaluate, Dense, LSTM, Embedding]
+_modules = [Sample, Imdb, ReadCSV, Sequential, Compile, Fit, Evaluate] + _layers + _activations
