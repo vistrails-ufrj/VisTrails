@@ -193,13 +193,14 @@ class Sequential(Module):
     """Sequential model from keras.
     """
     _settings = ModuleSettings(namespace="models")
-    _input_ports = [("input_dim", "basic:Integer", {"shape": "circle", "defaults": [0]})]
+    _input_ports = [("input_shape", "basic:List", {"shape": "circle"})]
     _output_ports = [("model", "basic:List", {"shape": "diamond"})]
 
     def compute(self):
         model = KerasSequential()
-        input_dim = self.get_input("input_dim")
-        self.set_output("model", (model, input_dim))
+        input_shape = self.get_input_list("input_shape")
+        input_shape = input_shape[0] if len(input_shape) == 1 else input_shape
+        self.set_output("model", (model, input_shape))
 
 class Compile(Module):
     """Compile model before train.
