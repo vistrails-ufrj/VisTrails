@@ -39,51 +39,99 @@ from vistrails.core.modules.vistrails_module import Module, ModuleError
 from vistrails.core.packagemanager import get_package_manager
 
 from keras.layers import Dense as KerasDense
+from keras.layers import Dropout as KerasDropout
 from keras.layers import LSTM as KerasLSTM
 from keras.layers.embeddings import Embedding as KerasEmbedding
 from keras.layers import Activation
 
+from .constants import _activations_list
+
 ###############################################################################
 # Layer functions
+initializer_shape = [(0,0),(1,0),(0,1)]
+regularizer_shape = [(0,0),(1,0),(1,1)]
+constraint_shape = [(1,1),(1,0),(0,1)]
 
-class Dense(Module):
+
+class KerasBase(Module):
+    """Base class for all keras item.
+    """
+    _settings = ModuleSettings(abstract=True)
+
+    _input_ports = [IPort(name="model", signature="basic:List", shape="diamond")]
+    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
+
+    def gen_tuple(self, port):
+        port_name, port_type = port
+        if(port_type == "basic:List"):
+            try:
+                value = self.get_input_list(port_name)
+            except:
+                value = None
+        else:
+            try:
+                value = self.get_input(port_name)
+            except:
+                value = None
+        return (port_name, value)
+
+    def get_parameters(self):
+        input_ports = filter(lambda x: x[0] != "model", self._input_ports[:])
+        input_ports = [port[0:2] for port in input_ports[:]]
+        return dict(map(self.gen_tuple, input_ports))
+    
+    def get_model(self):
+        return self.get_input("model")
+    
+class KerasLayer(KerasBase):
+    """Base class for all keras layers.
+    """
+    _settings = ModuleSettings(abstract=True)
+    _input_ports = [IPort(name="units", signature="basic:Integer", shape="circle"),
+                    IPort(name="activation", signature="basic:String", shape="circle", entry_type="enum", values=_activations_list, default="linear"),
+                    IPort(name="use_bias", signature="basic:Boolean", shape="circle", entry_type="enum", values=[True, False], default=True)]
+
+class Dense(KerasLayer):
     """Fully-connected layer to Keras model.
     """
     _settings = ModuleSettings(namespace="layers")
-    _input_ports = [("model", "basic:List", {"shape": "diamond"}),
-                    ("units", "basic:Integer", {"shape": "circle"}),
-                    ("activation", "basic:String", {"shape": "circle", "defaults": ["nothing"]})]
-    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
 
     def compute(self):
-        units = self.get_input("units")
-        activation = self.get_input("activation")
-        model = self.get_input("model")
-        
+        parameters = self.get_parameters()
+        model = self.get_model()
+
         if isinstance(model, tuple):
             model, input_dim = model
-            model.add(KerasDense(units=units, input_dim=input_dim))
-        else:
-            model.add(KerasDense(units=units))
-
-        if activation != "nothing":
-            model.add(Activation(activation))
-
+            parameters["input_dim"] = input_dim
+        
+        model.add(KerasDense(**parameters))
         self.set_output("model", model)
 
-class LSTM(Module):
+class Dropout(KerasBase):
     """Fully-connected layer to Keras model.
     """
     _settings = ModuleSettings(namespace="layers")
-    _input_ports = [("model", "basic:List", {"shape": "diamond"}),
-                    ("units", "basic:Integer", {"shape": "circle"}),
-                    ("activation", "basic:String", {"shape": "circle", "defaults": ["nothing"]})]
-    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
+    _input_ports = [IPort(name="rate", signature="basic:Float", shape="circle", default=0.0),
+                    IPort(name="noise_shape", signature="basic:List"),
+                    IPort(name="seed", signature="basic:Integer", shape="circle")]
+
+    def compute(self):
+        parameters = self.get_parameters()
+        model = self.get_model()
+
+        model.add(KerasDropout(**parameters))
+        self.set_output("model", model)        
+
+class LSTM(KerasLayer):
+    """Long Short-Term Memory layer - Hochreiter 1997.
+    """
+    _settings = ModuleSettings(namespace="layers")
 
     def compute(self):
         units = self.get_input("units")
         activation = self.get_input("activation")
         model = self.get_input("model")
+
         if isinstance(model, tuple):
             model, input_dim = model
             model.add(KerasLSTM(units=units, input_shape=(None,input_dim)))
@@ -114,4 +162,4 @@ class Embedding(Module):
             self.set_output("model", model)
 
 
-_layers = [Dense, LSTM, Embedding]
+_layers = [KerasBase, KerasLayer, Dense, Dropout, LSTM, Embedding]

@@ -48,7 +48,7 @@ class KerasActivation(Module):
     _settings = ModuleSettings(abstract=True)
     _input_ports = [("model", "basic:List", {"shape": "diamond"})]
     _output_ports = [("model", "basic:List", {"shape": "diamond"})]
-
+    
     
     def gen_tuple(self, port):
         port_name, port_type = port
