@@ -45,6 +45,7 @@ from keras.layers import Flatten as KerasFlatten
 from keras.layers import LSTM as KerasLSTM
 from keras.layers.embeddings import Embedding as KerasEmbedding
 from keras.layers import Activation
+from keras.layers import BatchNormalization as KerasBatchNormalization
 
 from .constants import _activations_list
 
@@ -191,5 +192,20 @@ class Embedding(KerasBase):
         model.add(KerasEmbedding(**parameters))
         self.set_output("model", model)
 
+class BatchNormalization(KerasBase):
+    """Batch normalization layer (Ioffe and Szegedy, 2014).
+    """
+    _settings = ModuleSettings(namespace="layers")
+    _input_ports = [IPort(name="axis", signature="basic:Integer", shape="circle", default=-1),
+                    IPort(name="momentum", signature="basic:Float", shape="circle", default=0.99),
+                    IPort(name="epsilon", signature="basic:Float", shape="circle", default=0.001)]
 
-_layers = [KerasBase, KerasLayer, Dense, Dropout, Flatten, LSTM, Embedding, Conv2D]
+    def compute(self):
+        parameters = self.get_parameters()
+        model = self.get_model()
+
+        model.add(KerasBatchNormalization(**parameters))
+        self.set_output("model", model)
+
+
+_layers = [KerasBase, KerasLayer, Dense, Dropout, Flatten, LSTM, Embedding, Conv2D, BatchNormalization]
