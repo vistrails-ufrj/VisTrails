@@ -38,6 +38,8 @@ from vistrails.core.modules.config import ModuleSettings, IPort, OPort
 from vistrails.core.modules.vistrails_module import Module, ModuleError
 from vistrails.core.packagemanager import get_package_manager
 
+from .utils import KerasBase
+
 from keras.layers import Dense as KerasDense
 from keras.layers import Conv2D as KerasConv2D
 from keras.layers import Dropout as KerasDropout
@@ -51,38 +53,6 @@ from .constants import _activations_list
 
 ###############################################################################
 # Layer functions
-
-
-class KerasBase(Module):
-    """Base class for all keras item.
-    """
-    _settings = ModuleSettings(abstract=True)
-
-    _input_ports = [IPort(name="model", signature="basic:List", shape="diamond")]
-    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
-
-    def gen_tuple(self, port):
-        port_name, port_type = port
-        if(port_type == "basic:List"):
-            try:
-                value = self.get_input_list(port_name)
-                value = value[0] if len(value) == 1 else value
-            except:
-                value = self.get_default_value(port_name)
-        else:
-            try:
-                value = self.get_input(port_name)
-            except:
-                value = None
-        return (port_name, value)
-
-    def get_parameters(self):
-        input_ports = filter(lambda x: x[0] != "model", self._input_ports[:])
-        input_ports = [port[0:2] for port in input_ports[:]]
-        return dict(map(self.gen_tuple, input_ports))
-    
-    def get_model(self):
-        return self.get_input("model")
     
 class KerasLayer(KerasBase):
     """Base class for all keras layers.
@@ -208,4 +178,4 @@ class BatchNormalization(KerasBase):
         self.set_output("model", model)
 
 
-_layers = [KerasBase, KerasLayer, Dense, Dropout, Flatten, LSTM, Embedding, Conv2D, BatchNormalization]
+_layers = [KerasLayer, Dense, Dropout, Flatten, LSTM, Embedding, Conv2D, BatchNormalization]

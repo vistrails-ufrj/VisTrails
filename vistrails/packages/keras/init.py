@@ -40,11 +40,12 @@ from vistrails.core.packagemanager import get_package_manager
 
 from .layers import _layers
 from .activations import _activations
+from .models import _models
+from .utils import KerasBase
 
 import numpy as np
 from keras.datasets import imdb
 from keras.preprocessing import sequence
-from keras.models import Sequential as KerasSequential
 
 from pandas import read_csv
 
@@ -186,93 +187,4 @@ class Imdb(Module):
         self.set_output("X_test", X_test)
         self.set_output("y_test", y_test)        
 
-###############################################################################
-# Model functions
-
-class Sequential(Module):
-    """Sequential model from keras.
-    """
-    _settings = ModuleSettings(namespace="models")
-    _input_ports = [("input_shape", "basic:List", {"shape": "circle", "labels": ["Dim"]})]
-    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
-
-    def compute(self):
-        model = KerasSequential()
-        input_shape = self.get_input_list("input_shape")
-        self.set_output("model", (model, input_shape))
-
-class Compile(Module):
-    """Compile model before train.
-    """
-    _settings = ModuleSettings(namespace="models")
-    _input_ports = [("model", "basic:List", {"shape": "diamond"}),
-                    ("optimizer", "basic:String", {"shape": "circle"}),
-                    ("loss", "basic:String", {"shape": "circle"}),
-                    ("metrics", "basic:List", {"shape": "circle"})]
-    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
-
-    def compute(self):
-        optimizer = self.get_input("optimizer")
-        loss = self.get_input("loss")
-        metrics = self.get_input("metrics")
-        model = self.get_input("model")
-        model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
-        self.set_output("model", model)
-
-
-class Fit(Module):
-    """Train the compiled model.
-    """
-    _settings = ModuleSettings(namespace="models")
-    _input_ports = [("model", "basic:List", {"shape": "diamond"}),
-                    ("data", "basic:List", {"shape": "circle"}),
-                    ("labels", "basic:List", {"shape": "circle"}),
-                    ("validation_split", "basic:Float", {"shape": "circle", "defaults": [0.0]}),
-                    ("epochs", "basic:Integer", {"shape": "circle"}),
-                    ("batch_size", "basic:Integer", {"shape": "circle", "defaults": [32]})]
-    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
-
-    def compute(self):
-        data = self.get_input("data")
-        labels = self.get_input("labels")
-        split = self.get_input("validation_split")
-        batch_size = self.get_input("batch_size")
-        epochs = self.get_input("epochs")
-        model = self.get_input("model")
-
-        callbacks = model.fit(data, labels, epochs=epochs, batch_size=batch_size, validation_split=split)
-        # summarize history for accuracy
-        plt.plot(callbacks.history['acc'])
-        if split != 0.0:
-            plt.plot(callbacks.history['val_acc'])
-        plt.title('model accuracy')
-        plt.ylabel('accuracy')
-        plt.xlabel('epoch')
-        plt.legend(['train', 'test'], loc='upper left')
-        plt.show()
-
-        self.set_output("model", model)
-
-class Evaluate(Module):
-    """Train the compiled model.
-    """
-    _settings = ModuleSettings(namespace="models")
-    _input_ports = [("model", "basic:List", {"shape": "diamond"}),
-                    ("data", "basic:List", {"shape": "circle"}),
-                    ("labels", "basic:List", {"shape": "circle"}),
-                    ("batch_size", "basic:Integer", {"shape": "circle", "defaults": [32]})]
-    _output_ports = [("score", "basic:List", {"shape": "square"}),
-                     ("accuracy", "basic:List", {"shape": "square"})]
-
-    def compute(self):
-        data = self.get_input("data")
-        labels = self.get_input("labels")
-        batch_size = self.get_input("batch_size")
-        model = self.get_input("model")
-
-        score, acc = model.evaluate(data, labels, batch_size=batch_size)
-
-        self.set_output("score", score)
-        self.set_output("accuracy", acc)
-
-_modules = [Sample, Imdb, ReadCSV, Sequential, Compile, Fit, Evaluate] + _layers + _activations
+_modules = [KerasBase, Sample, Imdb, ReadCSV] + _models + _layers + _activations
