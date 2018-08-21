@@ -44,7 +44,7 @@ class KerasBase(Module):
     _settings = ModuleSettings(abstract=True)
 
     _input_ports = [IPort(name="model", signature="basic:List", shape="diamond")]
-    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
+    _output_ports = [OPort(name="model", signature="basic:List", shape="diamond")]
 
     def gen_tuple(self, port):
         port_name, port_type = port

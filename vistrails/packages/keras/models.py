@@ -69,41 +69,34 @@ class Compile(KerasBase):
     def compute(self):
         parameters = self.get_parameters()
         model = self.get_model()
-        print(parameters)
         model.compile(**parameters)
         self.set_output("model", model)
 
 
-class Fit(Module):
+class Fit(KerasBase):
     """Train the compiled model.
     """
     _settings = ModuleSettings(namespace="models")
-    _input_ports = [("model", "basic:List", {"shape": "diamond"}),
-                    ("data", "basic:List", {"shape": "circle"}),
-                    ("labels", "basic:List", {"shape": "circle"}),
+    _input_ports = [("x", "basic:List", {"shape": "circle"}),
+                    ("y", "basic:List", {"shape": "circle"}),
                     ("validation_split", "basic:Float", {"shape": "circle", "defaults": [0.0]}),
                     ("epochs", "basic:Integer", {"shape": "circle"}),
                     ("batch_size", "basic:Integer", {"shape": "circle", "defaults": [32]})]
-    _output_ports = [("model", "basic:List", {"shape": "diamond"})]
 
     def compute(self):
-        data = self.get_input("data")
-        labels = self.get_input("labels")
-        split = self.get_input("validation_split")
-        batch_size = self.get_input("batch_size")
-        epochs = self.get_input("epochs")
-        model = self.get_input("model")
+        parameters = self.get_parameters()
+        model = self.get_model()
 
-        callbacks = model.fit(data, labels, epochs=epochs, batch_size=batch_size, validation_split=split)
+        callbacks = model.fit(**parameters)
         # summarize history for accuracy
-        plt.plot(callbacks.history['acc'])
-        if split != 0.0:
-            plt.plot(callbacks.history['val_acc'])
-        plt.title('model accuracy')
-        plt.ylabel('accuracy')
-        plt.xlabel('epoch')
-        plt.legend(['train', 'test'], loc='upper left')
-        plt.show()
+        # plt.plot(callbacks.history['acc'])
+        # if split != 0.0:
+        #     plt.plot(callbacks.history['val_acc'])
+        # plt.title('model accuracy')
+        # plt.ylabel('accuracy')
+        # plt.xlabel('epoch')
+        # plt.legend(['train', 'test'], loc='upper left')
+        # plt.show()
 
         self.set_output("model", model)
 
@@ -130,8 +123,26 @@ class Evaluate(Module):
         self.set_output("accuracy", acc)
 
 
+class SaveModel(Module):
+    """Save model after train.
+    """
+    _settings = ModuleSettings(namespace="models")
+    _input_ports = [IPort(name="model", signature="basic:List", shape="diamond"),
+                    IPort(name="filepath", signature="basic:OutputPath", shape="circle", default="model")]
+
+    def compute(self):
+        filepath = self.get_input("filepath").name
+        model = self.get_input("model")
+
+        # serialize model to JSON
+        model_json = model.to_json()
+        with open(filepath + ".json", "w") as json_file:
+            json_file.write(model_json)
+        # serialize weights to HDF5
+        model.save_weights(filepath + ".h5")
+        print("Saved model to disk")
 
 
 
 
-_models = [Sequential, Compile, Fit, Evaluate]
+_models = [Sequential, Compile, Fit, Evaluate, SaveModel]

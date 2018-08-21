@@ -47,6 +47,9 @@ def package_requirements():
     
     require_python_module('tensorflow', {
                           'pip': 'tensorflow==1.5.0'})
+    
+    require_python_module('h5py', {
+                          'pip': 'h5py==2.8.0'})
 
     require_python_module('pydot', {
                           'pip': 'pydot==1.2.3',

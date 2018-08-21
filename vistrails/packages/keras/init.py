@@ -99,6 +99,22 @@ class Sample(Module):
         if y_test != None:
             self.set_output("y_test",  y_test[:idx])
 
+class SplitCol(Module):
+    _input_ports = [("data", "basic:List", {"shape": "circle"}),
+                    ("col", "basic:Integer", {"shape": "circle"})]
+    _output_ports = [("x", "basic:List", {"shape": "circle"}),
+                     ("y", "basic:List", {"shape": "circle"})]
+
+    def compute(self):
+        data = self.get_input("data").values
+        col = self.get_input("col")
+        print(type(data))
+        X = data[:,0:8]
+        Y = data[:,8]
+        self.set_output("x", X)
+        self.set_output("y", Y)
+
+
 class ReadCSV(Module):
     """Returns pandas dataframe from CSV file
     """
@@ -187,4 +203,4 @@ class Imdb(Module):
         self.set_output("X_test", X_test)
         self.set_output("y_test", y_test)        
 
-_modules = [KerasBase, Sample, Imdb, ReadCSV] + _models + _layers + _activations
+_modules = [KerasBase, Sample, Imdb, ReadCSV, SplitCol] + _models + _layers + _activations
