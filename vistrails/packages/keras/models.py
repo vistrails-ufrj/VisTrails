@@ -63,7 +63,7 @@ class Compile(KerasBase):
     """Compile model before train.
     """
     _settings = ModuleSettings(namespace="models")
-    _input_ports = [IPort(name="optimizer", signature="basic:String", shape="circle", entry_type="enum", values=_optimizers_list),
+    _input_ports = KerasBase._input_ports + [IPort(name="optimizer", signature="basic:String", shape="circle", entry_type="enum", values=_optimizers_list),
                     IPort(name="loss", signature="basic:String", shape="circle", entry_type="enum", values=_losses_list),
                     IPort(name="metrics", signature="basic:String", depth=1, shape="circle", entry_type="enum", values=_metrics_list)]
 
@@ -78,7 +78,7 @@ class Fit(KerasBase):
     """Train the compiled model.
     """
     _settings = ModuleSettings(namespace="models")
-    _input_ports = [("x", "basic:List", {"shape": "circle"}),
+    _input_ports = KerasBase._input_ports + [("x", "basic:List", {"shape": "circle"}),
                     ("y", "basic:List", {"shape": "circle"}),
                     ("validation_split", "basic:Float", {"shape": "circle", "defaults": [0.0]}),
                     ("epochs", "basic:Integer", {"shape": "circle"}),

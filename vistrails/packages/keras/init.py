@@ -108,7 +108,6 @@ class SplitCol(Module):
     def compute(self):
         data = self.get_input("data").values
         col = self.get_input("col")
-        print(type(data))
         X = data[:,0:8]
         Y = data[:,8]
         self.set_output("x", X)

@@ -49,7 +49,7 @@ from keras.layers.embeddings import Embedding as KerasEmbedding
 from keras.layers import Activation
 from keras.layers import BatchNormalization as KerasBatchNormalization
 
-from .constants import _activations_list
+from .constants import _activations_list, _initializers_list
 
 ###############################################################################
 # Layer functions
@@ -58,14 +58,16 @@ class KerasLayer(KerasBase):
     """Base class for all keras layers.
     """
     _settings = ModuleSettings(abstract=True)
-    _input_ports = [IPort(name="activation", signature="basic:String", shape="circle", entry_type="enum", values=_activations_list, default="linear"),
+    _input_ports = KerasBase._input_ports + [IPort(name="activation", signature="basic:String", shape="circle", entry_type="enum", values=_activations_list, default="linear"),
+                    IPort(name="kernel_initializer", signature="basic:String", shape="circle", entry_type="enum", values=_initializers_list, default="glorot_uniform"),
+                    IPort(name="bias_initializer", signature="basic:String", shape="circle", entry_type="enum", values=_initializers_list, default="zeros"),
                     IPort(name="use_bias", signature="basic:Boolean", shape="circle", entry_type="enum", values=[True, False], default=True)]
 
 class Dense(KerasLayer):
     """Fully-connected layer to Keras model.
     """
     _settings = ModuleSettings(namespace="layers")
-    _input_ports = [IPort(name="units", signature="basic:Integer", shape="circle")]
+    _input_ports = KerasLayer._input_ports + [IPort(name="units", signature="basic:Integer", shape="circle")]
 
     def compute(self):
         parameters = self.get_parameters()
@@ -110,7 +112,7 @@ class LSTM(KerasLayer):
     """Long Short-Term Memory layer - Hochreiter 1997.
     """
     _settings = ModuleSettings(namespace="layers")
-    _input_ports = [IPort(name="units", signature="basic:Integer", shape="circle")]
+    _input_ports = KerasLayer._input_ports + [IPort(name="units", signature="basic:Integer", shape="circle")]
 
     def compute(self):
         parameters = self.get_parameters()
@@ -127,7 +129,7 @@ class Conv2D(KerasLayer):
     """2D convolution layer (e.g. spatial convolution over images).
     """
     _settings = ModuleSettings(namespace="layers")
-    _input_ports = [IPort(name="filters", signature="basic:Integer", shape="circle"),
+    _input_ports = KerasLayer._input_ports + [IPort(name="filters", signature="basic:Integer", shape="circle"),
                     IPort(name="kernel_size", signature="basic:List", shape="circle"),
                     IPort(name="strides", signature="basic:List", shape="circle", default=[1, 1]),
                     IPort(name="padding", signature="basic:String", shape="circle", entry_type="enum", values=["valid", "same"], default="valid"),

@@ -62,6 +62,7 @@ class KerasBase(Module):
         return (port_name, value)
 
     def get_parameters(self):
+        
         input_ports = filter(lambda x: x[0] != "model", self._input_ports[:])
         input_ports = [port[0:2] for port in input_ports[:]]
         return dict(map(self.gen_tuple, input_ports))
