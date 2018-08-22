@@ -47,3 +47,21 @@ _metrics_list = [
     "top_k_categorical_accuracy",
     "sparse_top_k_categorical_accuracy"
 ]
+
+_initializers_list = [
+    "zeros",
+    "ones",
+    "costant",
+    "random_normal",
+    "random_uniform",
+    "truncated_normal",
+    "variance_scaling",
+    "orthogonal",
+    "identity",
+    "lecun_uniform",
+    "glorot_normal",
+    "glorot_uniform",
+    "he_normal",
+    "lecun_normal",
+    "he_uniform"
+]
