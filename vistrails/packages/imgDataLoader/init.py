@@ -9,12 +9,16 @@ from vistrails.core.modules.config import ModuleSettings
 from vistrails.core.system import list2cmdline
 import vistrails.core.requirements
 from keras.preprocessing.image import ImageDataGenerator
+import keras
+from matplotlib import pyplot as plt
+from IPython.display import clear_output
+
 def __init__(self):
 	Module.__init__(self)
 
 
-#Basics modules
 
+#Basics modules
 class model(Module):
 
 	_settings = ModuleSettings(abstract=True)
@@ -26,7 +30,7 @@ class ImageDataGenerator(Module):
 	_output_ports = [("genericLoader", "ImageDataGenerator", {'shape': 'circle'})]
 
 
-
+#Loader Module
 class imgLoader(Module):
 	_settings = ModuleSettings(namespace="DataLoader")
 	_input_ports = [('img_Path', "basic:Path",{'shape': 'circle'}),
@@ -56,16 +60,21 @@ class imgLoader(Module):
 		datagen = ImageDataGenerator()
 
 		if len(augDict) > 0:
-			for item in augDict:
+			print("Augmentation: ")
+			for item in augDict:	
+				print str(item)+ ': ' + str(augDict[item])
 				setattr(datagen,item,augDict[item]) 
+			print("")
 
 
 		if len(preprocDict) > 0:
+			print("Pre-Processing: ")
 			for item in preprocDict:
-				setattr(datagen,item,preprocDict[item]) 		
+				print str(item) + ': '+ str(preprocDict[item])				
+				setattr(datagen,item,preprocDict[item]) 
+			print("")		
 
 
-		#print(datagen.zoom_range)
 		p1 = self.get_input("img_Path")
 		img_Path = Path.translate_to_string(p1)		
 
@@ -92,8 +101,7 @@ class augmentationConf(Module):
 	_input_ports = [('rotation_range',"basic:Integer",{'optional': True}),
 	('width_shift_range',"basic:Float",{'optional': True}),
 	('height_shift_range',"basic:Float",{'optional': True}),
-	('shear_range',"basic:Float",{'optional': True}),
-	('zoom_range',"basic:Float",{'optional': True}),
+	('shear_range',"basic:Float",{'optional': True}),	
 	('channel_shift_range',"basic:Float",{'optional': True}),
 	('fill_mode',"basic:String",{'optional': True}),
 	('cval',"basic:Float",{'optional': True}),	
@@ -109,8 +117,7 @@ class augmentationConf(Module):
 		for item in self.inputPorts:
 			augDict[item] =  self.get_input(item)
 
-		#print(augDict)
-
+	
 		self.set_output("augDict", augDict)
 
 
@@ -129,15 +136,15 @@ class preprocessingConf(Module):
 	
 	def compute(self):
 		preprocDict = {}
- 
-		for item in self.inputPorts:
+ 		
+ 		
+		for item in self.inputPorts: 
 			preprocDict[item] =  self.get_input(item)
 
-		#print(preprocDict)
 
 		self.set_output("preprocDict", preprocDict)
 
-
+#Visualization Module
 class imageVisualization(Module):
 	_input_ports = [IPort(name = "imgLoader", signature = "ImageDataGenerator")]
 
@@ -149,21 +156,37 @@ class imageVisualization(Module):
 
 
 		print(x_batch.shape)
+		idxDict = loader.class_indices
+	
+		plotText = ''
+		for l,i in sorted(idxDict.items()):
+			plotText = plotText + str(l) + ' = ' + str(i) + '\n'
 
 		numSamples = x_batch.shape[0]
 		fig = plt.figure()
 
+		
+		plt.gcf().text(0.02, 0.55, plotText, fontsize=12, style='italic',
+        bbox={'facecolor':'grey', 'alpha':0.1, 'pad':10})
 
 		for i in range (0,numSamples):
-		    image = x_batch[i]
-		    title = y_batch[i].argmax()
-		    title = "y: " + str(title)
-		    a = fig.add_subplot(3, np.ceil(numSamples/float(3)), i + 1)
-		    a.set_title(title)
-		    plt.imshow(image)
-		    
+			image = x_batch[i]
+			title = y_batch[i].argmax()
+			title = "y: " + str(title)
+			a = fig.add_subplot(3, np.ceil(numSamples/float(3)), i + 1)
+			a.set_title(title)
+			a.set_xticks([])
+			a.set_yticks([])
+			a.grid(False)
+			plt.imshow(image)
+
+		plt.subplots_adjust(left=0.2)
+		mng = plt.get_current_fig_manager()
+		mng.window.showMaximized()
 		plt.show()
 
+
+#Optimizers Modules
 class sgdOptimization(Module):
 	_settings = ModuleSettings(namespace="Optimizers")
 	_input_ports = [IPort(name = "learningRate", signature = "basic:Float"),
@@ -289,7 +312,7 @@ class nadamOptimization(Module):
 		self.set_output("optDict", optDict)
 
 
-#model modules
+#Model modules
 
 class resnet50(Module):
 	_settings = ModuleSettings(namespace="Models")
@@ -310,15 +333,11 @@ class resnet50(Module):
 		from keras import optimizers
 		from keras import losses
 
-		#train_generator = self.get_input("trainDataset")
-		#test_generator = self.get_input("testDataset")
-
-		#stepsEpoch = self.get_input("stepsEpoch")
-		#numEpochs = self.get_input("numEpochs")
-		#valSteps = self.get_input("valSteps")
-
 		
 		includeTop = True
+		wBool = False
+		tBool = True
+
 		weights = None	
 
 
@@ -354,7 +373,8 @@ class resnet50(Module):
 		for item in optDict:
 				setattr(opt,item,optDict[item]) 
 				print(item,getattr(opt,item))
-		
+		print("")
+
 		x = self.get_input("firstNumberShape")
 		y = self.get_input("secondNumberShape")
 		gray = self.get_input("grayscale")
@@ -367,9 +387,7 @@ class resnet50(Module):
 
 		iShape = (x,y,c) 		
 		nClass = self.get_input("numClass")
-		#x, y = train_generator[0]
-		#iShape = x[0].shape
-		#nClass = y[0].shape[0]
+
 
 		model = ResNet50(weights=None,input_shape=iShape, classes=nClass)
 		
@@ -381,14 +399,8 @@ class resnet50(Module):
 		
 		self.set_output("resnet50Model", model)
 
-		'''
-		model.fit_generator(
-        train_generator,
-        steps_per_epoch=stepsEpoch,
-        epochs=numEpochs,
-        validation_data=test_generator,
-        validation_steps=valSteps)
-		'''
+
+
 class inceptionV3(Module):
 	_settings = ModuleSettings(namespace="Models")
 	_input_ports = [IPort(name = "secondNumberShape", signature = "basic:Integer"),
@@ -408,15 +420,12 @@ class inceptionV3(Module):
 		from keras import optimizers
 		from keras import losses
 
-		#train_generator = self.get_input("trainDataset")
-		#test_generator = self.get_input("testDataset")
-
-		#stepsEpoch = self.get_input("stepsEpoch")
-		#numEpochs = self.get_input("numEpochs")
-		#valSteps = self.get_input("valSteps")
-
 		weights = None
 		includeTop = True
+		wBool = False
+		tBool = True
+
+	
 
 		if 'includeTop' in self.inputPorts:
 			tBool = self.get_input("includeTop")
@@ -449,6 +458,7 @@ class inceptionV3(Module):
 		for item in optDict:
 				setattr(opt,item,optDict[item]) 
 				print(item,getattr(opt,item))
+		print("")
 		
 		x = self.get_input("firstNumberShape")
 		y = self.get_input("secondNumberShape")
@@ -462,9 +472,6 @@ class inceptionV3(Module):
 
 		iShape = (x,y,c) 		
 		nClass = self.get_input("numClass")
-		#x, y = train_generator[0]
-		#iShape = x[0].shape
-		#nClass = y[0].shape[0]
 
 		model = InceptionV3(weights=None,input_shape=iShape, classes=nClass)
 		
@@ -495,15 +502,11 @@ class VGG16(Module):
 		from keras import optimizers
 		from keras import losses
 
-		#train_generator = self.get_input("trainDataset")
-		#test_generator = self.get_input("testDataset")
-
-		#stepsEpoch = self.get_input("stepsEpoch")
-		#numEpochs = self.get_input("numEpochs")
-		#valSteps = self.get_input("valSteps")
-
 		weights = None
 		includeTop = True
+		wBool = False
+		tBool = True
+
 
 		if 'includeTop' in self.inputPorts:
 			tBool = self.get_input("includeTop")
@@ -536,6 +539,7 @@ class VGG16(Module):
 		for item in optDict:
 				setattr(opt,item,optDict[item]) 
 				print(item,getattr(opt,item))
+		print("")
 		
 		x = self.get_input("firstNumberShape")
 		y = self.get_input("secondNumberShape")
@@ -549,9 +553,6 @@ class VGG16(Module):
 
 		iShape = (x,y,c) 		
 		nClass = self.get_input("numClass")
-		#x, y = train_generator[0]
-		#iShape = x[0].shape
-		#nClass = y[0].shape[0]
 
 		model = VGG16(weights=None,input_shape=iShape, classes=nClass)
 		
@@ -582,15 +583,12 @@ class mobileNet(Module):
 		from keras import optimizers
 		from keras import losses
 
-		#train_generator = self.get_input("trainDataset")
-		#test_generator = self.get_input("testDataset")
-
-		#stepsEpoch = self.get_input("stepsEpoch")
-		#numEpochs = self.get_input("numEpochs")
-		#valSteps = self.get_input("valSteps")
 
 		weights = None
 		includeTop = True
+		wBool = False
+		tBool = True
+
 
 		if 'includeTop' in self.inputPorts:
 			tBool = self.get_input("includeTop")
@@ -623,6 +621,7 @@ class mobileNet(Module):
 		for item in optDict:
 				setattr(opt,item,optDict[item]) 
 				print(item,getattr(opt,item))
+		print("")
 		
 		x = self.get_input("firstNumberShape")
 		y = self.get_input("secondNumberShape")
@@ -636,9 +635,6 @@ class mobileNet(Module):
 
 		iShape = (x,y,c) 		
 		nClass = self.get_input("numClass")
-		#x, y = train_generator[0]
-		#iShape = x[0].shape
-		#nClass = y[0].shape[0]
 
 		model = MobileNet(weights=None,input_shape=iShape, classes=nClass)
 		
@@ -669,15 +665,12 @@ class xception(Module):
 		from keras import optimizers
 		from keras import losses
 
-		#train_generator = self.get_input("trainDataset")
-		#test_generator = self.get_input("testDataset")
-
-		#stepsEpoch = self.get_input("stepsEpoch")
-		#numEpochs = self.get_input("numEpochs")
-		#valSteps = self.get_input("valSteps")
 
 		weights = None
 		includeTop = True
+		wBool = False
+		tBool = True
+
 
 		if 'includeTop' in self.inputPorts:
 			tBool = self.get_input("includeTop")
@@ -710,6 +703,8 @@ class xception(Module):
 		for item in optDict:
 				setattr(opt,item,optDict[item]) 
 				print(item,getattr(opt,item))
+		print("")
+
 		
 		x = self.get_input("firstNumberShape")
 		y = self.get_input("secondNumberShape")
@@ -723,9 +718,6 @@ class xception(Module):
 
 		iShape = (x,y,c) 		
 		nClass = self.get_input("numClass")
-		#x, y = train_generator[0]
-		#iShape = x[0].shape
-		#nClass = y[0].shape[0]
 
 		model = Xception(weights=None,input_shape=iShape, classes=nClass)
 		
@@ -756,15 +748,12 @@ class VGG19(Module):
 		from keras import optimizers
 		from keras import losses
 
-		#train_generator = self.get_input("trainDataset")
-		#test_generator = self.get_input("testDataset")
-
-		#stepsEpoch = self.get_input("stepsEpoch")
-		#numEpochs = self.get_input("numEpochs")
-		#valSteps = self.get_input("valSteps")
 
 		weights = None
 		includeTop = True
+		wBool = False
+		tBool = True
+
 
 		if 'includeTop' in self.inputPorts:
 			tBool = self.get_input("includeTop")
@@ -797,6 +786,7 @@ class VGG19(Module):
 		for item in optDict:
 				setattr(opt,item,optDict[item]) 
 				print(item,getattr(opt,item))
+		print("")
 		
 		x = self.get_input("firstNumberShape")
 		y = self.get_input("secondNumberShape")
@@ -810,9 +800,6 @@ class VGG19(Module):
 
 		iShape = (x,y,c) 		
 		nClass = self.get_input("numClass")
-		#x, y = train_generator[0]
-		#iShape = x[0].shape
-		#nClass = y[0].shape[0]
 
 		model = VGG19(weights=None,input_shape=iShape, classes=nClass)
 		
@@ -843,15 +830,12 @@ class inceptionResNetV2(Module):
 		from keras import optimizers
 		from keras import losses
 
-		#train_generator = self.get_input("trainDataset")
-		#test_generator = self.get_input("testDataset")
-
-		#stepsEpoch = self.get_input("stepsEpoch")
-		#numEpochs = self.get_input("numEpochs")
-		#valSteps = self.get_input("valSteps")
 
 		weights = None
 		includeTop = True
+		wBool = False
+		tBool = True
+
 
 		if 'includeTop' in self.inputPorts:
 			tBool = self.get_input("includeTop")
@@ -884,6 +868,7 @@ class inceptionResNetV2(Module):
 		for item in optDict:
 				setattr(opt,item,optDict[item]) 
 				print(item,getattr(opt,item))
+		print("")
 		
 		x = self.get_input("firstNumberShape")
 		y = self.get_input("secondNumberShape")
@@ -897,9 +882,6 @@ class inceptionResNetV2(Module):
 
 		iShape = (x,y,c) 		
 		nClass = self.get_input("numClass")
-		#x, y = train_generator[0]
-		#iShape = x[0].shape
-		#nClass = y[0].shape[0]
 
 		model = InceptionResNetV2(weights=None,input_shape=iShape, classes=nClass)
 		
@@ -930,15 +912,12 @@ class denseNet121(Module):
 		from keras import optimizers
 		from keras import losses
 
-		#train_generator = self.get_input("trainDataset")
-		#test_generator = self.get_input("testDataset")
-
-		#stepsEpoch = self.get_input("stepsEpoch")
-		#numEpochs = self.get_input("numEpochs")
-		#valSteps = self.get_input("valSteps")
 
 		weights = None
 		includeTop = True
+		wBool = False
+		tBool = True
+
 
 		if 'includeTop' in self.inputPorts:
 			tBool = self.get_input("includeTop")
@@ -972,6 +951,7 @@ class denseNet121(Module):
 		for item in optDict:
 				setattr(opt,item,optDict[item]) 
 				print(item,getattr(opt,item))
+		print("")
 		
 		x = self.get_input("firstNumberShape")
 		y = self.get_input("secondNumberShape")
@@ -985,9 +965,6 @@ class denseNet121(Module):
 
 		iShape = (x,y,c) 		
 		nClass = self.get_input("numClass")
-		#x, y = train_generator[0]
-		#iShape = x[0].shape
-		#nClass = y[0].shape[0]
 
 		model = DenseNet121(weights=None,input_shape=iShape, classes=nClass)
 		
@@ -1018,15 +995,11 @@ class denseNet169(Module):
 		from keras import optimizers
 		from keras import losses
 
-		#train_generator = self.get_input("trainDataset")
-		#test_generator = self.get_input("testDataset")
-
-		#stepsEpoch = self.get_input("stepsEpoch")
-		#numEpochs = self.get_input("numEpochs")
-		#valSteps = self.get_input("valSteps")
-
 		weights = None
 		includeTop = True
+		wBool = False
+		tBool = True
+
 
 		if 'includeTop' in self.inputPorts:
 			tBool = self.get_input("includeTop")
@@ -1058,6 +1031,7 @@ class denseNet169(Module):
 		for item in optDict:
 				setattr(opt,item,optDict[item]) 
 				print(item,getattr(opt,item))
+		print("")
 		
 		x = self.get_input("firstNumberShape")
 		y = self.get_input("secondNumberShape")
@@ -1071,9 +1045,7 @@ class denseNet169(Module):
 
 		iShape = (x,y,c) 		
 		nClass = self.get_input("numClass")
-		#x, y = train_generator[0]
-		#iShape = x[0].shape
-		#nClass = y[0].shape[0]
+
 
 		model = DenseNet169(weights=None,input_shape=iShape, classes=nClass)
 		
@@ -1104,15 +1076,11 @@ class denseNet201(Module):
 		from keras import optimizers
 		from keras import losses
 
-		#train_generator = self.get_input("trainDataset")
-		#test_generator = self.get_input("testDataset")
-
-		#stepsEpoch = self.get_input("stepsEpoch")
-		#numEpochs = self.get_input("numEpochs")
-		#valSteps = self.get_input("valSteps")
-
 		weights = None
 		includeTop = True
+		wBool = False
+		tBool = True
+
 
 		if 'includeTop' in self.inputPorts:
 			tBool = self.get_input("includeTop")
@@ -1144,6 +1112,7 @@ class denseNet201(Module):
 		for item in optDict:
 				setattr(opt,item,optDict[item]) 
 				print(item,getattr(opt,item))
+		print("")
 		
 		x = self.get_input("firstNumberShape")
 		y = self.get_input("secondNumberShape")
@@ -1157,9 +1126,7 @@ class denseNet201(Module):
 
 		iShape = (x,y,c) 		
 		nClass = self.get_input("numClass")
-		#x, y = train_generator[0]
-		#iShape = x[0].shape
-		#nClass = y[0].shape[0]
+
 
 		model = DenseNet201(weights=None,input_shape=iShape, classes=nClass)
 		
@@ -1170,7 +1137,10 @@ class denseNet201(Module):
 		print(type(model))
 		
 		self.set_output("mobileNetModel", model)
+   
 
+       
+        
 
 
 
@@ -1184,6 +1154,7 @@ class modelFit(Module):
 	IPort(name = "valSteps", signature = "basic:Integer"),]
 
 	def compute(self):
+
 		train_generator = self.get_input("trainDataset")
 		test_generator = self.get_input("testDataset")
 
@@ -1193,12 +1164,49 @@ class modelFit(Module):
 
 		model = self.get_input("genericModel")
 
-		model.fit_generator(
+
+		print("")
+		print("loss:")
+		print(model.loss)
+		print("")
+		met = model.metrics[0]
+		met = met.capitalize()
+		print("metrics:")
+		print(met)
+		print("")
+
+
+		history = model.fit_generator(
         train_generator,
         steps_per_epoch=stepsEpoch,
         epochs=numEpochs,
-        validation_data=test_generator,
+        validation_data=test_generator,        
         validation_steps=valSteps)
+
+
+		plt.subplot(221)
+		plt.plot(history.history['acc'])
+		plt.plot(history.history['val_acc'])
+		plt.title('Accuracy')
+		plt.legend(['train', 'test'], loc='upper left')
+		
+		
+
+		plt.subplot(222)
+		plt.plot(history.history['loss'])
+		plt.plot(history.history['val_loss'])
+		plt.title('Log-Loss (Cost Function)')
+		plt.xlabel('epoch')
+		plt.legend(['train', 'test'], loc='upper left')
+
+		mng = plt.get_current_fig_manager()
+		mng.window.showMaximized()
+
+		plt.show()
+		
+
+
+        
 	
 
 _modules = [ImageDataGenerator,augmentationConf,preprocessingConf,imageVisualization,resnet50,sgdOptimization,rmsPropOptimization,
