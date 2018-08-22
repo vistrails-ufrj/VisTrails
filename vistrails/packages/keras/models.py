@@ -42,6 +42,7 @@ from .utils import KerasBase
 from .constants import _optimizers_list, _losses_list, _metrics_list
 
 from keras.models import Sequential as KerasSequential
+from keras.models import model_from_json
 
 ###############################################################################
 # Model functions
@@ -134,15 +135,33 @@ class SaveModel(Module):
         filepath = self.get_input("filepath").name
         model = self.get_input("model")
 
-        # serialize model to JSON
         model_json = model.to_json()
         with open(filepath + ".json", "w") as json_file:
             json_file.write(model_json)
-        # serialize weights to HDF5
         model.save_weights(filepath + ".h5")
-        print("Saved model to disk")
+
+class LoadModel(Module):
+    """Load trained model.
+    """
+    _settings = ModuleSettings(namespace="models")
+    _input_ports = [IPort(name="structure_model", signature="basic:File", shape="circle", default="model.json"),
+                    IPort(name="weigths", signature="basic:File", shape="circle", default="model.h5")]
+    _output_ports = [OPort(name="model", signature="basic:List", shape="diamond")]
+
+    def compute(self):
+        json_path = self.get_input("structure_model").name
+        h5_path = self.get_input("weigths").name
+        
+        json_file = open(json_path, 'r')
+        loaded_model_json = json_file.read()
+        json_file.close()
+
+        loaded_model = model_from_json(loaded_model_json)
+        loaded_model.load_weights(h5_path)
+
+        self.set_output("model", loaded_model)
 
 
 
 
-_models = [Sequential, Compile, Fit, Evaluate, SaveModel]
+_models = [Sequential, Compile, Fit, Evaluate, SaveModel, LoadModel]
