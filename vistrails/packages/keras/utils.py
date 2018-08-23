@@ -38,13 +38,10 @@ from vistrails.core.modules.config import ModuleSettings, IPort, OPort
 from vistrails.core.modules.vistrails_module import Module, ModuleError
 from vistrails.core.packagemanager import get_package_manager
 
-class KerasBase(Module):
-    """Base class for all keras item.
+class ModuleBase(Module):
+    """Base class for all vistrails module.
     """
     _settings = ModuleSettings(abstract=True)
-
-    _input_ports = [IPort(name="model", signature="basic:List", shape="diamond")]
-    _output_ports = [OPort(name="model", signature="basic:List", shape="diamond")]
 
     def gen_tuple(self, port):
         port_name, port_type = port
@@ -66,6 +63,14 @@ class KerasBase(Module):
         input_ports = filter(lambda x: x[0] != "model", self._input_ports[:])
         input_ports = [port[0:2] for port in input_ports[:]]
         return dict(map(self.gen_tuple, input_ports))
+
+class KerasBase(ModuleBase):
+    """Base class for all keras item.
+    """
+    _settings = ModuleSettings(abstract=True)
+
+    _input_ports = [IPort(name="model", signature="basic:List", shape="diamond")]
+    _output_ports = [OPort(name="model", signature="basic:List", shape="diamond")]
     
     def get_model(self):
         return self.get_input("model")
