@@ -86,6 +86,7 @@ class Fit(KerasBase):
 
     def compute(self):
         parameters = self.get_parameters()
+        print(parameters["x"])
         model = self.get_model()
 
         callbacks = model.fit(**parameters)
@@ -99,6 +100,24 @@ class Fit(KerasBase):
         # plt.legend(['train', 'test'], loc='upper left')
         # plt.show()
 
+        self.set_output("model", model)
+
+class FitGenerator(KerasBase):
+    """Train the compiled model.
+    """
+    _settings = ModuleSettings(namespace="models")
+    _input_ports = KerasBase._input_ports + [("x", "basic:List", {"shape": "circle"}),
+                    ("y", "basic:List", {"shape": "circle"}),
+                    ("steps_per_epoch", "basic:Integer", {"shape": "circle"}),
+                    ("epochs", "basic:Integer", {"shape": "circle"}),
+                    ("batch_size", "basic:Integer", {"shape": "circle", "defaults": [32]}),
+                    ("shuffle", "basic:Boolean", {"shape": "circle", "defaults": [True]}),
+                    ("use_multiprocessing", "basic:Boolean", {"shape": "circle", "defaults": [False]}),
+                    ("initial_epoch", "basic:Integer", {"shape": "circle", "defaults": [0]})]
+    def compute(self):
+        parameters = self.get_parameters()
+        model = self.get_model()
+        print(parameters)
         self.set_output("model", model)
 
 class Evaluate(Module):
@@ -164,4 +183,4 @@ class LoadModel(Module):
 
 
 
-_models = [Sequential, Compile, Fit, Evaluate, SaveModel, LoadModel]
+_models = [Sequential, Compile, Fit, FitGenerator, Evaluate, SaveModel, LoadModel]

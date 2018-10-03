@@ -41,6 +41,7 @@ from vistrails.core.packagemanager import get_package_manager
 from .layers import _layers
 from .activations import _activations
 from .models import _models
+from .datasets import _datasets
 from .utils import ModuleBase, KerasBase
 
 import numpy as np
@@ -114,34 +115,6 @@ class SplitCol(Module):
         self.set_output("x", X)
         self.set_output("y", Y)
 
-
-class ReadCSV(ModuleBase):
-    """Returns pandas dataframe from CSV file
-    """
-    _settings = ModuleSettings(namespace="datasets")
-    _input_ports = [("filepath_or_buffer", "basic:File", {"shape": "circle"}),
-                    ("delimiter", "basic:String", {"shape": "circle", "defaults": [',']}),
-                    ("header", "basic:Integer", {"shape": "circle", "defaults": [0]}),
-                    IPort(name="parse_dates", signature="basic:String", depth=1, shape="circle"),
-                    ("index_col", "basic:List", {"shape": "circle"}),
-                    ("chunksize", "basic:Integer", {"shape": "circle"}),
-                    ("date_parser", "basic:String", {"shape": "circle"})]
-
-    _output_ports = [("data", "basic:List", {"shape": "circle"})]
-    
-    def compute(self):
-        parameters = self.get_parameters()
-        parameters["filepath_or_buffer"] = parameters["filepath_or_buffer"].name
-        parameters["parse_dates"] = [parameters["parse_dates"]] if parameters["parse_dates"] else False
-        
-        if parameters["date_parser"]:
-            date_parser = parameters["date_parser"]
-            parameters["date_parser"] = lambda x: datetime.strptime(x, date_parser)
-        
-        data = read_csv(**parameters)
-        print(data.head())
-        self.set_output("data", data)
-
 ###############################################################################
 # Example datasets
 
@@ -199,4 +172,4 @@ class Imdb(Module):
         self.set_output("X_test", X_test)
         self.set_output("y_test", y_test)        
 
-_modules = [ModuleBase, KerasBase, Sample, Imdb, ReadCSV, SplitCol] + _models + _layers + _activations
+_modules = [ModuleBase, KerasBase, Sample, Imdb, SplitCol] + _models + _layers + _activations + _datasets

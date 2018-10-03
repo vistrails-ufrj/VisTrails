@@ -74,3 +74,57 @@ class KerasBase(ModuleBase):
     
     def get_model(self):
         return self.get_input("model")
+
+import pandas as pd
+import numpy as np
+from collections import Counter
+import itertools
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+
+class PandasGenerator(object):
+    def __init__(self, chunks, percent_filter=0.5):
+        self.chunks = chunks
+        self.percent_filter = percent_filter
+        self.describe, self.encoder, self.size = self.get_metrics()
+    
+    def get_metrics(self):
+        self.chunks, self.chunks_copy = itertools.tee(self.chunks)
+        size = tuple()
+        setlist = None
+        self.normalizer = StandardScaler()
+        for chunk in self.chunks_copy:
+            size = tuple(map(sum, zip(size, (chunk.shape[0],0)))) if size else chunk.shape
+            objchunk = chunk.select_dtypes(include=['object'])
+            objchunksets = objchunk.apply(set, axis=0)
+            floatchunk = chunk.select_dtypes(include=['float']).fillna(0.0)
+            self.normalizer.partial_fit(floatchunk)
+            if setlist is None:
+                setlist = objchunksets
+            else:
+                setlist = setlist.combine(objchunksets, lambda s1, s2: s1 | s2)
+        
+        encoder = setlist.apply(lambda featureset: LabelEncoder().fit(list(featureset))).to_dict()
+        encoder = {k:v for k,v in encoder.items() if len(v.classes_) <= size[0]*self.percent_filter}
+        return setlist, encoder, size
+    
+    def __iter__(self):
+        return self
+    
+    def __next__(self):
+        self.next()
+
+    def next(self):
+        chunk = next(self.chunks)
+        
+        floatchunk = chunk.select_dtypes(include=['float']).fillna(0.0)
+        if not floatchunk.empty:
+            normalizefeatures = self.normalizer.transform(chunk[floatchunk.columns].fillna(0.0))
+            chunk[floatchunk.columns] = normalizefeatures
+        
+        objchunk = chunk.select_dtypes(include=['object'])
+        if not objchunk.empty and len(self.encoder.keys()) > 0:
+            embeddingfeatures = [encoder.transform(objchunk[column].fillna('nan')) for column, encoder in self.encoder.items()]
+            chunk[list(self.encoder.keys())] = np.column_stack(embeddingfeatures)
+        
+        columns = chunk.select_dtypes(include=['int', 'float']).columns
+        return chunk.filter(columns)
