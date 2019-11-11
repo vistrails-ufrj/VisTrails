@@ -1188,7 +1188,8 @@ class modelFit(Module):
 		plt.plot(history.history['acc'])
 		plt.plot(history.history['val_acc'])
 		plt.title('Accuracy')
-		plt.legend(['train', 'test'], loc='upper left')
+		plt.xlabel('epoch')
+		plt.legend(['train', 'validation'], loc='upper left')
 		
 		
 
@@ -1197,7 +1198,7 @@ class modelFit(Module):
 		plt.plot(history.history['val_loss'])
 		plt.title('Log-Loss (Cost Function)')
 		plt.xlabel('epoch')
-		plt.legend(['train', 'test'], loc='upper left')
+		plt.legend(['train', 'validation'], loc='upper left')
 
 		mng = plt.get_current_fig_manager()
 		mng.window.showMaximized()
